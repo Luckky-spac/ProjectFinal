@@ -42,7 +42,7 @@ async function seed() {
       hire_date: '2024-01-01',
     },
   });
-  await admin.update({ role: 'admin', status: 'active' });
+  await admin.update({ name: 'ເຈົ້າຂອງຮ້ານ', phone: '0800000001', position: 'ເຈົ້າຂອງ', role: 'admin', status: 'active' });
 
   const [staff] = await Employee.findOrCreate({
     where: { email: 'staff@karaoke.com' },
@@ -57,7 +57,7 @@ async function seed() {
       hire_date: '2024-03-01',
     },
   });
-  await staff.update({ role: 'staff', status: 'active' });
+  await staff.update({ name: 'ສົມສີ ພະນັກງານ', phone: '0800000002', position: 'ພະນັກງານຕ້ອນຮັບ', role: 'staff', status: 'active' });
 
   // ─── Users ────────────────────────────────────────────────────────────────
   const [member] = await User.findOrCreate({
@@ -70,6 +70,7 @@ async function seed() {
       role: 'member',
     },
   });
+  await member.update({ name: 'ສົມໄຊ ລູກຄ້າ', phone: '0800000003' });
 
   const [member2] = await User.findOrCreate({
     where: { email: 'member2@karaoke.com' },
@@ -81,6 +82,7 @@ async function seed() {
       role: 'member',
     },
   });
+  await member2.update({ name: 'ສົມຍິງ ລູກຄ້າ', phone: '0800000004' });
 
   console.log('Users & Employees seeded');
 
