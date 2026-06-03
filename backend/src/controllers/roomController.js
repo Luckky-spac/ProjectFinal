@@ -32,10 +32,12 @@ const getRooms = async (req, res) => {
       });
       const bookedRoomIds = new Set(overlappingBookings.map((b) => b.room_id));
 
-      const result = rooms.map((room) => ({
-        ...room.toJSON(),
-        isAvailable: !bookedRoomIds.has(room.id) && room.status === 'available',
-      }));
+      const result = rooms
+        .map((room) => ({
+          ...room.toJSON(),
+          isAvailable: !bookedRoomIds.has(room.id) && room.status === 'available',
+        }))
+        .filter((room) => room.isAvailable);
       return res.json(result);
     }
 

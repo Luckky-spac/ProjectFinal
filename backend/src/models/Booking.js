@@ -14,7 +14,7 @@ const Booking = sequelize.define('Booking', {
   deposit_amount: { type: DataTypes.DECIMAL(10, 2), defaultValue: 0 },
   deposit_slip: { type: DataTypes.STRING(500) },
   status: {
-    type: DataTypes.ENUM('pending', 'confirmed', 'checked_in', 'completed', 'cancelled'),
+    type: DataTypes.ENUM('pending', 'confirmed', 'checking_in', 'checked_in', 'checking_out', 'completed', 'cancelled'),
     defaultValue: 'pending',
   },
   note: { type: DataTypes.TEXT },

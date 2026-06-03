@@ -2,54 +2,85 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../api/axios';
 
-const STATUS_LABEL = {
-  available: { text: 'ว่าง', cls: 'bg-green-100 text-green-700' },
-  occupied: { text: 'ไม่ว่าง', cls: 'bg-red-100 text-red-700' },
-  maintenance: { text: 'ซ่อมบำรุง', cls: 'bg-yellow-100 text-yellow-700' },
-};
+function RoomCard({ room, onBook }) {
+  const isAvail = room.isAvailable;
+  const isMaint = room.status === 'maintenance';
 
-function RoomCard({ room, filterParams, onBook }) {
-  const badge = room.isAvailable
-    ? STATUS_LABEL.available
-    : room.status === 'maintenance'
-    ? STATUS_LABEL.maintenance
-    : STATUS_LABEL.occupied;
+  let badge, badgeCls;
+  if (isAvail)       { badge = 'ວ່າງ';       badgeCls = 'bg-green-500 text-white'; }
+  else if (isMaint)  { badge = 'ຊ່ອມບຳລຸງ'; badgeCls = 'bg-yellow-500 text-white'; }
+  else               { badge = 'ບໍ່ວ່າງ';    badgeCls = 'bg-red-500 text-white'; }
 
   return (
-    <div className="bg-white rounded-2xl shadow hover:shadow-md transition overflow-hidden flex flex-col">
-      <div className="h-40 bg-gray-100 overflow-hidden">
-        {room.image_url ? (
-          <img src={room.image_url} alt={room.room_number} className="w-full h-full object-cover" />
-        ) : (
-          <div className="flex items-center justify-center h-full text-gray-400 text-4xl">🎤</div>
-        )}
-      </div>
-      <div className="p-4 flex flex-col flex-1 gap-2">
-        <div className="flex items-center justify-between">
-          <h3 className="font-bold text-lg">ห้อง {room.room_number}</h3>
-          <span className={`text-xs font-semibold px-2 py-1 rounded-full ${badge.cls}`}>
-            {badge.text}
+    <div className="bg-rose-100 rounded-2xl overflow-hidden shadow-md border border-rose-200">
+      {/* Header */}
+      <div className="flex items-center justify-between px-5 pt-4 pb-2">
+        <div className="flex items-center gap-2">
+          <h3 className="font-bold text-[#7B2438] text-base">
+            ຫ້ອງ {room.room_number} — {room.roomType?.name}
+          </h3>
+          <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${badgeCls}`}>
+            {badge}
           </span>
         </div>
-        <p className="text-sm text-gray-500">{room.roomType?.name}</p>
-        <div className="flex gap-4 text-sm text-gray-600 mt-1">
-          <span>ชั้น {room.floor}</span>
-          <span>จุ {room.roomType?.capacity} คน</span>
-        </div>
-        <p className="text-purple-600 font-semibold mt-1">
-          ฿{Number(room.roomType?.price_per_hour).toLocaleString()} / ชม.
+        <span className="text-[#7B2438] text-xl">📅</span>
+      </div>
+
+      {/* Info Row */}
+      <div className="flex gap-4 px-5 pb-3 text-sm text-[#7B2438] font-medium flex-wrap">
+        <span>🏠 <strong>SIZE {room.room_number}</strong></span>
+        <span>👤 ບັບຈຸໄດ້ {room.roomType?.capacity} ທ່ານ</span>
+        <span>💲 ฿{Number(room.roomType?.price_per_hour).toLocaleString()}/ຊົ່ວໂມງ</span>
+        <span>🏢 ຊັ້ນ {room.floor}</span>
+      </div>
+
+      {/* Photos — 2 ช่อง */}
+      <div className="grid grid-cols-2 gap-2 px-5 pb-3">
+        {[0, 1].map((i) => (
+          <div
+            key={i}
+            className="bg-gray-300 h-36 rounded-xl flex items-center justify-center overflow-hidden"
+          >
+            {room.image_url && i === 0 ? (
+              <img
+                src={room.image_url}
+                alt={`ຫ້ອງ ${room.room_number}`}
+                className="w-full h-full object-cover"
+              />
+            ) : (
+              /*
+                TODO: ใส่รูปห้อง {room.room_number} รูปที่ {i + 1}
+                วิธี: เพิ่ม image_url ในข้อมูลห้องผ่าน Admin Panel
+                หรือวาง path รูปใน image_url ของ room
+              */
+              <span className="text-gray-400 text-xs text-center px-2 leading-5">
+                [ ຮູບຫ້ອງ {room.room_number} ]
+              </span>
+            )}
+          </div>
+        ))}
+      </div>
+
+      {/* Amenities */}
+      {room.roomType?.amenities && (
+        <p className="text-xs text-rose-500 px-5 pb-2 truncate">
+          ✨ {room.roomType.amenities}
         </p>
-        {room.roomType?.amenities && (
-          <p className="text-xs text-gray-400 truncate">{room.roomType.amenities}</p>
-        )}
+      )}
+
+      {/* Footer */}
+      <div className="px-5 pb-4 flex items-center justify-between">
+        <span className="text-xs text-rose-400 italic">{room.roomType?.name}</span>
         <button
           onClick={() => onBook(room)}
-          disabled={!room.isAvailable}
-          className="mt-auto py-2 rounded-xl text-sm font-semibold transition
-            disabled:bg-gray-100 disabled:text-gray-400 disabled:cursor-not-allowed
-            bg-purple-600 text-white hover:bg-purple-700"
+          disabled={!isAvail}
+          className={`px-5 py-1.5 rounded-lg text-sm font-bold transition shadow-sm ${
+            isAvail
+              ? 'bg-[#7B2438] text-white hover:bg-rose-900'
+              : 'bg-gray-300 text-gray-400 cursor-not-allowed'
+          }`}
         >
-          {room.isAvailable ? 'จองห้องนี้' : 'ไม่ว่าง'}
+          {isAvail ? 'ຈອງຫ້ອງນີ້' : 'ບໍ່ວ່າງ'}
         </button>
       </div>
     </div>
@@ -63,7 +94,6 @@ export default function RoomsPage() {
   const [rooms, setRooms] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-
   const [date, setDate] = useState(today);
   const [startTime, setStartTime] = useState('');
   const [endTime, setEndTime] = useState('');
@@ -76,15 +106,13 @@ export default function RoomsPage() {
       const res = await api.get('/rooms', { params });
       setRooms(res.data);
     } catch (err) {
-      setError(err.response?.data?.message || 'โหลดข้อมูลล้มเหลว');
+      setError(err.response?.data?.message || 'ໂຫຼດຂໍ້ມູນລົ້ມເຫຼວ');
     } finally {
       setLoading(false);
     }
   };
 
-  useEffect(() => {
-    fetchRooms();
-  }, []);
+  useEffect(() => { fetchRooms(); }, []);
 
   const handleSearch = (e) => {
     e.preventDefault();
@@ -110,86 +138,76 @@ export default function RoomsPage() {
     navigate(`/booking?${params.toString()}`);
   };
 
-  const availableCount = rooms.filter((r) => r.isAvailable).length;
+  const availCount = rooms.filter((r) => r.isAvailable).length;
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="max-w-6xl mx-auto px-4 py-8">
-        <h1 className="text-2xl font-bold text-gray-800 mb-6">ห้องคาราโอเกะทั้งหมด</h1>
+    <div className="min-h-screen bg-green-50">
+      <div className="max-w-2xl mx-auto px-4 py-8">
+        <h1 className="text-2xl font-bold text-[#7B2438] mb-6">ຫ້ອງຄາຣາໂອເກະທັງໝົດ</h1>
 
-        {/* Filter */}
+        {/* ─── Filter ─── */}
         <form
           onSubmit={handleSearch}
-          className="bg-white rounded-2xl shadow p-4 mb-6 flex flex-wrap gap-3 items-end"
+          className="bg-white rounded-2xl shadow-sm p-4 mb-6 flex flex-wrap gap-3 items-end border border-rose-100"
         >
           <div className="flex flex-col gap-1">
-            <label className="text-xs text-gray-500">วันที่</label>
+            <label className="text-xs text-gray-500 font-medium">ວັນທີ</label>
             <input
-              type="date"
-              min={today}
-              value={date}
+              type="date" min={today} value={date}
               onChange={(e) => setDate(e.target.value)}
-              className="border rounded-lg px-3 py-2 text-sm"
+              className="border border-rose-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-rose-300"
             />
           </div>
           <div className="flex flex-col gap-1">
-            <label className="text-xs text-gray-500">เวลาเริ่ม</label>
+            <label className="text-xs text-gray-500 font-medium">ເວລາເລີ່ມ</label>
             <input
-              type="time"
-              value={startTime}
+              type="time" value={startTime}
               onChange={(e) => setStartTime(e.target.value)}
-              className="border rounded-lg px-3 py-2 text-sm"
+              className="border border-rose-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-rose-300"
             />
           </div>
           <div className="flex flex-col gap-1">
-            <label className="text-xs text-gray-500">เวลาสิ้นสุด</label>
+            <label className="text-xs text-gray-500 font-medium">ເວລາສິ້ນສຸດ</label>
             <input
-              type="time"
-              value={endTime}
+              type="time" value={endTime}
               onChange={(e) => setEndTime(e.target.value)}
-              className="border rounded-lg px-3 py-2 text-sm"
+              className="border border-rose-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-rose-300"
             />
           </div>
           <button
             type="submit"
             disabled={!date || !startTime || !endTime}
-            className="px-5 py-2 bg-purple-600 text-white rounded-lg text-sm font-semibold
-              hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="px-5 py-2 bg-[#7B2438] text-white rounded-lg text-sm font-bold hover:bg-rose-900 disabled:opacity-50 transition"
           >
-            ค้นหาห้องว่าง
+            ຄົ້ນຫາຫ້ອງວ່າງ
           </button>
           {filtered && (
             <button
-              type="button"
-              onClick={handleReset}
-              className="px-4 py-2 border border-gray-300 rounded-lg text-sm text-gray-600 hover:bg-gray-50"
+              type="button" onClick={handleReset}
+              className="px-4 py-2 border border-rose-300 rounded-lg text-sm text-[#7B2438] hover:bg-rose-50 transition"
             >
-              รีเซ็ต
+              ລີເຊັດ
             </button>
           )}
         </form>
 
         {filtered && !loading && (
           <p className="text-sm text-gray-500 mb-4">
-            ว่างในช่วง {date} เวลา {startTime}–{endTime}: <strong>{availableCount} ห้อง</strong>
+            ວ່າງໃນຊ່ວງ {date} ເວລາ {startTime}–{endTime}:{' '}
+            <strong className="text-[#7B2438]">{availCount} ຫ້ອງ</strong>
           </p>
         )}
 
         {error && <p className="text-red-500 text-sm mb-4">{error}</p>}
 
         {loading ? (
-          <div className="flex justify-center py-20 text-gray-400">กำลังโหลด...</div>
+          <div className="flex justify-center py-20 text-gray-400">ກຳລັງໂຫຼດ...</div>
         ) : rooms.length === 0 ? (
-          <div className="text-center text-gray-400 py-20">ไม่พบห้อง</div>
+          <div className="text-center text-gray-400 py-20">ບໍ່ພົບຫ້ອງ</div>
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+          <div className="flex flex-col gap-5">
             {rooms.map((room) => (
-              <RoomCard
-                key={room.id}
-                room={room}
-                filterParams={{ date, startTime, endTime }}
-                onBook={handleBook}
-              />
+              <RoomCard key={room.id} room={room} onBook={handleBook} />
             ))}
           </div>
         )}

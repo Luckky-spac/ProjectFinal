@@ -1,26 +1,31 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import api from '../api/axios';
 
 const STATUS_CONFIG = {
-  pending: { text: 'รอยืนยัน', cls: 'bg-yellow-100 text-yellow-700' },
-  confirmed: { text: 'ยืนยันแล้ว', cls: 'bg-blue-100 text-blue-700' },
-  checked_in: { text: 'เช็คอินแล้ว', cls: 'bg-green-100 text-green-700' },
-  completed: { text: 'เสร็จสิ้น', cls: 'bg-gray-100 text-gray-600' },
-  cancelled: { text: 'ยกเลิก', cls: 'bg-red-100 text-red-500' },
+  pending: { text: 'ລໍການຢືນຢັນ', cls: 'bg-yellow-100 text-yellow-700' },
+  confirmed: { text: 'ຢືນຢັນແລ້ວ', cls: 'bg-blue-100 text-blue-700' },
+  checking_in: { text: 'ລໍຢືນຢັນ check-in', cls: 'bg-indigo-100 text-indigo-700' },
+  checked_in: { text: 'ເຊັກອິນແລ້ວ', cls: 'bg-green-100 text-green-700' },
+  checking_out: { text: 'ລໍຢືນຢັນ check-out', cls: 'bg-orange-100 text-orange-600' },
+  completed: { text: 'ສຳເລັດ', cls: 'bg-gray-100 text-gray-600' },
+  cancelled: { text: 'ຍົກເລີກ', cls: 'bg-red-100 text-red-500' },
 };
 
 const TABS = [
-  { key: '', label: 'ทั้งหมด' },
-  { key: 'pending', label: 'รอยืนยัน' },
-  { key: 'confirmed', label: 'ยืนยันแล้ว' },
-  { key: 'checked_in', label: 'เช็คอินแล้ว' },
-  { key: 'completed', label: 'เสร็จสิ้น' },
-  { key: 'cancelled', label: 'ยกเลิก' },
+  { key: '', label: 'ທັງໝົດ' },
+  { key: 'pending', label: 'ລໍການຢືນຢັນ' },
+  { key: 'confirmed', label: 'ຢືນຢັນແລ້ວ' },
+  { key: 'checking_in', label: 'ລໍ check-in' },
+  { key: 'checked_in', label: 'ເຊັກອິນແລ້ວ' },
+  { key: 'checking_out', label: 'ລໍ check-out' },
+  { key: 'completed', label: 'ສຳເລັດ' },
+  { key: 'cancelled', label: 'ຍົກເລີກ' },
 ];
 
 function formatDateTime(iso) {
   if (!iso) return '-';
-  return new Date(iso).toLocaleString('th-TH', {
+  return new Date(iso).toLocaleString('en-GB', {
     year: 'numeric', month: 'short', day: 'numeric',
     hour: '2-digit', minute: '2-digit',
   });
@@ -31,7 +36,7 @@ function ActionButton({ label, color, onClick, disabled }) {
     blue: 'bg-blue-500 hover:bg-blue-600 text-white',
     green: 'bg-green-600 hover:bg-green-700 text-white',
     red: 'bg-red-500 hover:bg-red-600 text-white',
-    purple: 'bg-purple-600 hover:bg-purple-700 text-white',
+    purple: 'bg-[#7B2438] hover:bg-rose-900 text-white',
   };
   return (
     <button
@@ -44,10 +49,59 @@ function ActionButton({ label, color, onClick, disabled }) {
   );
 }
 
+function RoomTransferForm({ booking, onSuccess, onCancel }) {
+  const [rooms, setRooms] = useState([]);
+  const [toRoomId, setToRoomId] = useState('');
+  const [reason, setReason] = useState('');
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    api.get('/rooms').then((r) => setRooms(r.data.filter((rm) => rm.isAvailable && rm.id !== booking.room_id))).catch(() => {});
+  }, [booking.room_id]);
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (!toRoomId) return;
+    setLoading(true);
+    try {
+      const res = await api.patch(`/bookings/${booking.id}/transfer`, { to_room_id: Number(toRoomId), reason });
+      onSuccess(res.data);
+    } catch (err) {
+      alert(err.response?.data?.message || 'ເກີດຂໍ້ຜິດພາດ');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <form onSubmit={handleSubmit} className="mt-3 bg-rose-50 rounded-xl p-4 flex flex-col gap-3">
+      <p className="text-sm font-semibold text-[#7B2438]">ຍ້າຍຫ້ອງ</p>
+      <select value={toRoomId} onChange={(e) => setToRoomId(e.target.value)} required
+        className="border rounded-lg px-3 py-2 text-sm">
+        <option value="">-- ເລືອກຫ້ອງໃໝ່ --</option>
+        {rooms.map((r) => <option key={r.id} value={r.id}>ຫ້ອງ {r.room_number} — {r.roomType?.name}</option>)}
+      </select>
+      <input placeholder="ເຫດຜົນ (ບໍ່ບັງຄັບ)" value={reason} onChange={(e) => setReason(e.target.value)}
+        className="border rounded-lg px-3 py-2 text-sm" />
+      <div className="flex gap-2">
+        <button type="submit" disabled={loading || !toRoomId}
+          className="text-xs px-3 py-1.5 bg-[#7B2438] text-white rounded-lg font-semibold disabled:opacity-40">
+          {loading ? 'ກຳລັງຍ້າຍ...' : 'ຢືນຢັນຍ້າຍຫ້ອງ'}
+        </button>
+        <button type="button" onClick={onCancel}
+          className="text-xs px-3 py-1.5 bg-gray-200 text-gray-700 rounded-lg font-semibold">
+          ຍົກເລີກ
+        </button>
+      </div>
+    </form>
+  );
+}
+
 function BookingRow({ booking, onUpdate }) {
   const cfg = STATUS_CONFIG[booking.status] || { text: booking.status, cls: 'bg-gray-100 text-gray-500' };
   const [loading, setLoading] = useState(false);
   const [expanded, setExpanded] = useState(false);
+  const [showTransfer, setShowTransfer] = useState(false);
 
   const hasDepositSlip = !!booking.deposit_slip;
   const pendingFinalPayment = booking.payments?.find((p) => p.type === 'final' && p.status === 'pending');
@@ -58,7 +112,31 @@ function BookingRow({ booking, onUpdate }) {
       const res = await api.patch(`/bookings/${booking.id}/status`, { status });
       onUpdate(res.data);
     } catch (err) {
-      alert(err.response?.data?.message || 'เกิดข้อผิดพลาด');
+      alert(err.response?.data?.message || 'ເກີດຂໍ້ຜິດພາດ');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const confirmCheckin = async () => {
+    setLoading(true);
+    try {
+      const res = await api.patch(`/bookings/${booking.id}/checkin/confirm`);
+      onUpdate(res.data);
+    } catch (err) {
+      alert(err.response?.data?.message || 'ເກີດຂໍ້ຜິດພາດ');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const confirmCheckout = async () => {
+    setLoading(true);
+    try {
+      const res = await api.patch(`/bookings/${booking.id}/checkout/confirm`);
+      onUpdate(res.data);
+    } catch (err) {
+      alert(err.response?.data?.message || 'ເກີດຂໍ້ຜິດພາດ');
     } finally {
       setLoading(false);
     }
@@ -71,7 +149,7 @@ function BookingRow({ booking, onUpdate }) {
       const res = await api.patch(`/payments/${pendingFinalPayment.id}/confirm`);
       onUpdate(res.data.booking);
     } catch (err) {
-      alert(err.response?.data?.message || 'เกิดข้อผิดพลาด');
+      alert(err.response?.data?.message || 'ເກີດຂໍ້ຜິດພາດ');
     } finally {
       setLoading(false);
     }
@@ -84,7 +162,7 @@ function BookingRow({ booking, onUpdate }) {
       await api.patch(`/payments/${pendingFinalPayment.id}/reject`);
       onUpdate({ ...booking, payments: booking.payments.map((p) => p.id === pendingFinalPayment.id ? { ...p, status: 'rejected' } : p) });
     } catch (err) {
-      alert(err.response?.data?.message || 'เกิดข้อผิดพลาด');
+      alert(err.response?.data?.message || 'ເກີດຂໍ້ຜິດພາດ');
     } finally {
       setLoading(false);
     }
@@ -99,17 +177,17 @@ function BookingRow({ booking, onUpdate }) {
       >
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 flex-wrap">
-            <span className="font-semibold text-sm">ห้อง {booking.room?.room_number}</span>
+            <span className="font-semibold text-sm">ຫ້ອງ {booking.room?.room_number}</span>
             <span className="text-xs text-gray-400">{booking.room?.roomType?.name}</span>
             <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${cfg.cls}`}>{cfg.text}</span>
             {hasDepositSlip && booking.status === 'pending' && (
               <span className="text-xs bg-orange-100 text-orange-600 px-2 py-0.5 rounded-full font-semibold">
-                มี slip มัดจำ
+                ມີສະລິບມັດຈຳ
               </span>
             )}
             {pendingFinalPayment && (
               <span className="text-xs bg-green-100 text-green-600 px-2 py-0.5 rounded-full font-semibold">
-                มี slip ชำระเงิน
+                ມີສະລິບຊຳລະເງິນ
               </span>
             )}
           </div>
@@ -117,7 +195,7 @@ function BookingRow({ booking, onUpdate }) {
             {booking.user?.name} · {formatDateTime(booking.start_time)} – {formatDateTime(booking.end_time)}
           </p>
         </div>
-        <span className="text-sm font-bold text-purple-700 whitespace-nowrap">
+        <span className="text-sm font-bold text-[#7B2438] whitespace-nowrap">
           ฿{Number(booking.total_price).toLocaleString()}
         </span>
         <span className="text-gray-400 text-xs">{expanded ? '▲' : '▼'}</span>
@@ -127,10 +205,10 @@ function BookingRow({ booking, onUpdate }) {
       {expanded && (
         <div className="border-t px-4 py-3 flex flex-col gap-3 bg-gray-50">
           <div className="grid grid-cols-2 gap-2 text-sm text-gray-600">
-            <div><span className="text-gray-400">ผู้จอง: </span>{booking.user?.name}</div>
-            <div><span className="text-gray-400">โทร: </span>{booking.user?.phone || '-'}</div>
-            <div><span className="text-gray-400">ผู้เข้าใช้: </span>{booking.guests} คน</div>
-            <div><span className="text-gray-400">มัดจำ: </span>฿{Number(booking.deposit_amount || 0).toLocaleString()}</div>
+            <div><span className="text-gray-400">ຜູ້ຈອງ: </span>{booking.user?.name}</div>
+            <div><span className="text-gray-400">ໂທ: </span>{booking.user?.phone || '-'}</div>
+            <div><span className="text-gray-400">ຜູ້ເຂົ້າໃຊ້: </span>{booking.guests} ຄົນ</div>
+            <div><span className="text-gray-400">ມັດຈຳ: </span>฿{Number(booking.deposit_amount || 0).toLocaleString()}</div>
           </div>
 
           {booking.note && (
@@ -140,7 +218,7 @@ function BookingRow({ booking, onUpdate }) {
           {/* Slip images */}
           {booking.deposit_slip && (
             <div>
-              <p className="text-xs text-gray-400 mb-1">Slip มัดจำ</p>
+              <p className="text-xs text-gray-400 mb-1">ສະລິບມັດຈຳ</p>
               <a href={booking.deposit_slip} target="_blank" rel="noreferrer">
                 <img src={booking.deposit_slip} alt="deposit slip" className="h-28 rounded-lg object-cover border" />
               </a>
@@ -148,7 +226,7 @@ function BookingRow({ booking, onUpdate }) {
           )}
           {pendingFinalPayment?.slip_url && (
             <div>
-              <p className="text-xs text-gray-400 mb-1">Slip ชำระเงินส่วนที่เหลือ</p>
+              <p className="text-xs text-gray-400 mb-1">ສະລິບຊຳລະເງິນສ່ວນທີ່ເຫຼືອ</p>
               <a href={pendingFinalPayment.slip_url} target="_blank" rel="noreferrer">
                 <img src={pendingFinalPayment.slip_url} alt="final slip" className="h-28 rounded-lg object-cover border" />
               </a>
@@ -158,30 +236,53 @@ function BookingRow({ booking, onUpdate }) {
           {/* Action buttons */}
           <div className="flex gap-2 flex-wrap">
             {booking.status === 'pending' && hasDepositSlip && (
-              <ActionButton label="ยืนยันมัดจำ" color="blue" disabled={loading} onClick={() => changeStatus('confirmed')} />
+              <ActionButton label="ຢືນຢັນມັດຈຳ" color="blue" disabled={loading} onClick={() => changeStatus('confirmed')} />
+            )}
+            {booking.status === 'checking_in' && (
+              <ActionButton label="ຢືນຢັນ Check-in" color="green" disabled={loading} onClick={confirmCheckin} />
             )}
             {booking.status === 'confirmed' && (
-              <ActionButton label="เช็คอิน" color="green" disabled={loading} onClick={() => changeStatus('checked_in')} />
+              <ActionButton label="Check-in (ພະນັກງານ)" color="green" disabled={loading} onClick={confirmCheckin} />
             )}
-            {booking.status === 'checked_in' && pendingFinalPayment && (
+            {booking.status === 'checking_out' && (
+              <ActionButton label="ຢືນຢັນ Check-out" color="purple" disabled={loading} onClick={confirmCheckout} />
+            )}
+            {booking.status === 'checked_in' && (
+              <ActionButton label="Check-out (ພະນັກງານ)" color="purple" disabled={loading} onClick={confirmCheckout} />
+            )}
+            {['checked_in', 'checking_out', 'completed'].includes(booking.status) && pendingFinalPayment && (
               <>
-                <ActionButton label="ยืนยันชำระเงิน" color="purple" disabled={loading} onClick={confirmFinalPayment} />
-                <ActionButton label="ปฏิเสธ slip" color="red" disabled={loading} onClick={rejectFinalPayment} />
+                <ActionButton label="ຢືນຢັນຊຳລະເງິນ" color="purple" disabled={loading} onClick={confirmFinalPayment} />
+                <ActionButton label="ປະຕິເສດສະລິບ" color="red" disabled={loading} onClick={rejectFinalPayment} />
               </>
             )}
+            {['confirmed', 'checked_in', 'checking_in', 'checking_out'].includes(booking.status) && (
+              <ActionButton label="ຍ້າຍຫ້ອງ" color="blue" disabled={loading} onClick={() => setShowTransfer((v) => !v)} />
+            )}
             {['pending', 'confirmed'].includes(booking.status) && (
-              <ActionButton label="ยกเลิกการจอง" color="red" disabled={loading} onClick={() => {
-                if (window.confirm('ยืนยันยกเลิกการจองนี้?')) changeStatus('cancelled');
+              <ActionButton label="ຍົກເລີກການຈອງ" color="red" disabled={loading} onClick={() => {
+                if (window.confirm('ຢືນຢັນຍົກເລີກການຈອງນີ້?')) changeStatus('cancelled');
               }} />
             )}
           </div>
+          {showTransfer && (
+            <RoomTransferForm booking={booking} onSuccess={(updated) => { onUpdate(updated); setShowTransfer(false); }} onCancel={() => setShowTransfer(false)} />
+          )}
         </div>
       )}
     </div>
   );
 }
 
+const SIDEBAR_NAV = [
+  { label: '📋 ການຈອງ', path: '/staff' },
+  { label: '🏠 ຫ້ອງ', path: '/admin' },
+  { label: '👤 ສະມາຊິກ', path: '/admin' },
+  { label: '📊 ລາຍງານ', path: '/reports' },
+];
+
 export default function StaffDashboardPage() {
+  const navigate = useNavigate();
   const [bookings, setBookings] = useState([]);
   const [loading, setLoading] = useState(true);
   const [tab, setTab] = useState('');
@@ -193,7 +294,7 @@ export default function StaffDashboardPage() {
     const params = status ? { status } : {};
     api.get('/bookings', { params })
       .then((res) => setBookings(res.data))
-      .catch((err) => setError(err.response?.data?.message || 'โหลดข้อมูลล้มเหลว'))
+      .catch((err) => setError(err.response?.data?.message || 'ໂຫຼດຂໍ້ມູນລົ້ມເຫຼວ'))
       .finally(() => setLoading(false));
   };
 
@@ -205,52 +306,88 @@ export default function StaffDashboardPage() {
 
   const needAttention = bookings.filter(
     (b) => (b.status === 'pending' && b.deposit_slip) ||
+            b.status === 'checking_in' ||
+            b.status === 'checking_out' ||
             (b.status === 'checked_in' && b.payments?.some((p) => p.type === 'final' && p.status === 'pending'))
   ).length;
 
   return (
-    <div className="min-h-screen bg-gray-50 py-8 px-4">
-      <div className="max-w-4xl mx-auto">
-        <div className="flex items-center justify-between mb-6">
-          <div>
-            <h1 className="text-2xl font-bold text-gray-800">Staff Dashboard</h1>
-            {needAttention > 0 && (
-              <p className="text-sm text-orange-600 font-medium mt-0.5">
-                {needAttention} รายการรอดำเนินการ
-              </p>
-            )}
-          </div>
-          <button onClick={() => fetchBookings(tab)}
-            className="text-sm text-purple-600 hover:underline">
-            รีเฟรช
-          </button>
-        </div>
+    <div className="min-h-screen bg-green-50 flex">
 
-        {/* Tabs */}
-        <div className="flex gap-1 flex-wrap mb-4">
-          {TABS.map((t) => (
-            <button key={t.key} onClick={() => setTab(t.key)}
-              className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition ${
-                tab === t.key ? 'bg-purple-600 text-white' : 'bg-white text-gray-600 border hover:bg-gray-50'
-              }`}>
-              {t.label}
+      {/* ─── Sidebar ─── */}
+      <aside className="w-52 bg-[#7B2438] min-h-screen shrink-0 flex flex-col">
+        <div className="px-5 py-5 border-b border-rose-700">
+          <p className="text-white font-bold text-sm tracking-wide">DASHBOARD</p>
+          <p className="text-rose-300 text-xs mt-0.5">ລະບົບຈັດການ</p>
+        </div>
+        <nav className="flex flex-col py-2">
+          {SIDEBAR_NAV.map((item) => (
+            <button
+              key={item.label}
+              onClick={() => navigate(item.path)}
+              className={`text-left px-5 py-3 text-sm font-medium transition border-l-4 ${
+                item.path === '/staff'
+                  ? 'bg-rose-900 text-white border-white'
+                  : 'text-rose-300 border-transparent hover:bg-rose-900 hover:text-white'
+              }`}
+            >
+              {item.label}
             </button>
           ))}
-        </div>
-
-        {error && <p className="text-red-500 text-sm mb-4">{error}</p>}
-
-        {loading ? (
-          <div className="flex justify-center py-20 text-gray-400">กำลังโหลด...</div>
-        ) : bookings.length === 0 ? (
-          <div className="text-center py-20 text-gray-400">ไม่มีการจอง</div>
-        ) : (
-          <div className="flex flex-col gap-3">
-            {bookings.map((b) => (
-              <BookingRow key={b.id} booking={b} onUpdate={handleUpdate} />
-            ))}
+        </nav>
+        {needAttention > 0 && (
+          <div className="mx-4 mt-4 bg-orange-500 text-white rounded-xl px-3 py-2 text-xs text-center font-semibold">
+            {needAttention} ລາຍການລໍຖ້າ
           </div>
         )}
+      </aside>
+
+      {/* ─── Main Content ─── */}
+      <div className="flex-1 py-8 px-6">
+        <div className="max-w-3xl">
+          <div className="flex items-center justify-between mb-6">
+            <div>
+              <h1 className="text-2xl font-bold text-[#7B2438]">ການຈອງ</h1>
+              {needAttention > 0 && (
+                <p className="text-sm text-orange-600 font-medium mt-0.5">
+                  {needAttention} ລາຍການລໍດຳເນີນການ
+                </p>
+              )}
+            </div>
+            <button onClick={() => fetchBookings(tab)}
+              className="text-sm text-[#7B2438] hover:underline font-medium">
+              ໂຫຼດໃໝ່
+            </button>
+          </div>
+
+          {/* Status Tabs */}
+          <div className="flex gap-1.5 flex-wrap mb-5">
+            {TABS.map((t) => (
+              <button key={t.key} onClick={() => setTab(t.key)}
+                className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition ${
+                  tab === t.key
+                    ? 'bg-[#7B2438] text-white'
+                    : 'bg-white text-gray-600 border border-gray-200 hover:bg-rose-50'
+                }`}>
+                {t.label}
+              </button>
+            ))}
+          </div>
+
+          {error && <p className="text-red-500 text-sm mb-4">{error}</p>}
+
+          {loading ? (
+            <div className="flex justify-center py-20 text-gray-400">ກຳລັງໂຫຼດ...</div>
+          ) : bookings.length === 0 ? (
+            <div className="text-center py-20 text-gray-400">ບໍ່ມີການຈອງ</div>
+          ) : (
+            <div className="flex flex-col gap-3">
+              {bookings.map((b) => (
+                <BookingRow key={b.id} booking={b} onUpdate={handleUpdate} />
+              ))}
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );

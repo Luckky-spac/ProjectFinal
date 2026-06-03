@@ -110,4 +110,37 @@ const me = async (req, res) => {
   }
 };
 
-module.exports = { register, login, employeeLogin, me };
+// PUT /auth/profile
+const updateProfile = async (req, res) => {
+  try {
+    const { name, phone, password, new_password } = req.body;
+    if (req.user.type === 'employee') {
+      const emp = await Employee.findByPk(req.user.id);
+      if (!emp) return res.status(404).json({ message: 'ไม่พบบัญชีนี้' });
+      if (password && new_password) {
+        if (!(await bcrypt.compare(password, emp.password))) {
+          return res.status(400).json({ message: 'รหัสผ่านเดิมไม่ถูกต้อง' });
+        }
+        await emp.update({ name: name || emp.name, phone: phone || emp.phone, password: await bcrypt.hash(new_password, 10) });
+      } else {
+        await emp.update({ name: name || emp.name, phone: phone || emp.phone });
+      }
+      return res.json({ id: emp.id, name: emp.name, email: emp.email, phone: emp.phone, role: emp.role, type: 'employee' });
+    }
+    const user = await User.findByPk(req.user.id);
+    if (!user) return res.status(404).json({ message: 'ไม่พบบัญชีนี้' });
+    if (password && new_password) {
+      if (!(await bcrypt.compare(password, user.password))) {
+        return res.status(400).json({ message: 'รหัสผ่านเดิมไม่ถูกต้อง' });
+      }
+      await user.update({ name: name || user.name, phone: phone || user.phone, password: await bcrypt.hash(new_password, 10) });
+    } else {
+      await user.update({ name: name || user.name, phone: phone || user.phone });
+    }
+    return res.json({ id: user.id, name: user.name, email: user.email, phone: user.phone, role: user.role, type: 'user' });
+  } catch (err) {
+    return res.status(500).json({ message: err.message });
+  }
+};
+
+module.exports = { register, login, employeeLogin, me, updateProfile };

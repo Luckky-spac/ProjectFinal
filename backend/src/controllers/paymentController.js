@@ -1,4 +1,5 @@
 const { Payment, Booking, Room, RoomType, User } = require('../models');
+// Room ใช้สำหรับ update status เมื่อ payment confirmed
 
 const bookingIncludes = [
   { model: Room, as: 'room', include: [{ model: RoomType, as: 'roomType' }] },
@@ -62,13 +63,15 @@ const confirmPayment = async (req, res) => {
       confirmed_at: new Date(),
     });
 
-    await Booking.update(
-      { status: 'completed', actual_check_out: new Date() },
-      { where: { id: payment.booking_id } }
-    );
+    // ถ้า booking ยังอยู่ใน checked_in หรือ checking_out ให้ complete เลย
+    const booking = await Booking.findByPk(payment.booking_id);
+    if (['checked_in', 'checking_out'].includes(booking.status)) {
+      await booking.update({ status: 'completed', actual_check_out: new Date() });
+      await Room.update({ status: 'available' }, { where: { id: booking.room_id } });
+    }
 
-    const booking = await Booking.findByPk(payment.booking_id, { include: bookingIncludes });
-    res.json({ payment, booking });
+    const full = await Booking.findByPk(payment.booking_id, { include: bookingIncludes });
+    res.json({ payment, booking: full });
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
