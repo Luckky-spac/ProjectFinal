@@ -1,5 +1,5 @@
 const { Op, fn, col, literal } = require('sequelize');
-const { sequelize, Booking, Payment, Room, RoomType, User } = require('../models');
+const { sequelize, Booking, Payment, Room, RoomType, User, Customer } = require('../models');
 
 // GET /api/reports/bookings?date=YYYY-MM-DD
 const bookingsReport = async (req, res) => {
@@ -15,7 +15,7 @@ const bookingsReport = async (req, res) => {
       where,
       include: [
         { model: Room, as: 'room', include: [{ model: RoomType, as: 'roomType' }] },
-        { model: User, as: 'user', attributes: ['id', 'name', 'email', 'phone'] },
+        { model: User, as: 'user', attributes: ['id', 'email'], include: [{ model: Customer, as: 'customer', attributes: ['name', 'phone'] }] },
         { model: Payment, as: 'payments' },
       ],
       order: [['createdAt', 'DESC']],
@@ -127,6 +127,7 @@ const customersReport = async (req, res) => {
   try {
     const users = await User.findAll({
       attributes: { exclude: ['password'] },
+      include: [{ model: Customer, as: 'customer', attributes: ['name', 'phone'] }],
       order: [['createdAt', 'DESC']],
     });
 
@@ -152,6 +153,7 @@ const customersReport = async (req, res) => {
     });
 
     const stats = users.map((user) => {
+      const { customer, ...userJson } = user.toJSON();
       const userBookings = bookingsByUser[user.id] || [];
       const total_bookings = userBookings.length;
       const completed_bookings = userBookings.filter((b) => b.status === 'completed').length;
@@ -160,7 +162,9 @@ const customersReport = async (req, res) => {
         return sum + pmts.reduce((s, p) => s + parseFloat(p.amount || 0), 0);
       }, 0);
       return {
-        ...user.toJSON(),
+        ...userJson,
+        name: customer?.name,
+        phone: customer?.phone,
         total_bookings,
         completed_bookings,
         total_spent: parseFloat(total_spent.toFixed(2)),

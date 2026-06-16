@@ -1,11 +1,13 @@
 import { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import api from '../api/axios';
 
 export default function LoginPage() {
   const { login } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
+  const registered = location.state?.registered;
   const [form, setForm] = useState({ email: '', password: '' });
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
@@ -37,6 +39,12 @@ export default function LoginPage() {
           <h1 className="text-2xl font-bold text-[#7B2438]">LatsavongBook</h1>
           <p className="text-rose-400 text-sm mt-1">ເຂົ້າສູ່ລະບົບ</p>
         </div>
+
+        {registered && (
+          <div className="bg-green-50 text-green-700 text-sm px-4 py-2 rounded-lg mb-4">
+            ສະໝັກສະມາຊິກສຳເລັດ! ກະລຸນາເຂົ້າສູ່ລະບົບ
+          </div>
+        )}
 
         {error && (
           <div className="bg-red-50 text-red-600 text-sm px-4 py-2 rounded-lg mb-4">

@@ -1,12 +1,10 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { useAuth } from '../context/AuthContext';
 import api from '../api/axios';
 
 export default function RegisterPage() {
-  const { login } = useAuth();
   const navigate = useNavigate();
-  const [form, setForm] = useState({ name: '', email: '', password: '', confirm: '', phone: '' });
+  const [form, setForm] = useState({ name: '', email: '', password: '', confirm: '', phone: '', gender: '', birthday: '' });
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
@@ -20,14 +18,15 @@ export default function RegisterPage() {
     }
     setLoading(true);
     try {
-      const { data } = await api.post('/auth/register', {
+      await api.post('/auth/register', {
         name: form.name,
         email: form.email,
         password: form.password,
         phone: form.phone,
+        gender: form.gender || undefined,
+        birthday: form.birthday || undefined,
       });
-      login(data.user, data.token);
-      navigate('/');
+      navigate('/login', { state: { registered: true } });
     } catch (err) {
       setError(err.response?.data?.message || 'ເກີດຂໍ້ຜິດພາດ');
     } finally {
@@ -41,7 +40,6 @@ export default function RegisterPage() {
     <div className="min-h-screen flex items-center justify-center bg-green-50 py-8">
       <div className="bg-white p-8 rounded-2xl shadow-lg w-full max-w-md border border-rose-100">
 
-        {/* Header */}
         <div className="text-center mb-6">
           <div className="text-4xl mb-2">🎤</div>
           <h1 className="text-2xl font-bold text-[#7B2438]">LatsavongBook</h1>
@@ -67,9 +65,29 @@ export default function RegisterPage() {
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">📞 ເບີໂທ</label>
-            <input type="tel" name="phone" value={form.phone} onChange={handleChange}
-              className={inputCls} placeholder="020-xxx-xxxx" />
+            <input type="tel" name="phone" value={form.phone} onChange={handleChange} required
+              pattern="[0-9]{10,15}" minLength={10} maxLength={15}
+              title="ເບີໂທຕ້ອງມີຢ່າງໜ້ອຍ 10 ຕົວເລກ (ຕົວຢ່າງ: 02012345678)"
+              className={inputCls} placeholder="02012345678" />
           </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">⚧ ເພດ</label>
+              <select name="gender" value={form.gender} onChange={handleChange} className={inputCls}>
+                <option value="">-- ບໍ່ລະບຸ --</option>
+                <option value="male">ຊາຍ</option>
+                <option value="female">ຍິງ</option>
+                <option value="other">ອື່ນໆ</option>
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">🎂 ວັນເດືອນປີເກີດ</label>
+              <input type="date" name="birthday" value={form.birthday} onChange={handleChange}
+                className={inputCls} />
+            </div>
+          </div>
+
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">🔒 ລະຫັດຜ່ານ</label>
             <input type="password" name="password" value={form.password} onChange={handleChange} required
@@ -80,6 +98,7 @@ export default function RegisterPage() {
             <input type="password" name="confirm" value={form.confirm} onChange={handleChange} required
               className={inputCls} placeholder="••••••••" />
           </div>
+
           <button
             type="submit"
             disabled={loading}

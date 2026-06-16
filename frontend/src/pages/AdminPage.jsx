@@ -18,7 +18,7 @@ function Btn({ label, color = 'purple', onClick, disabled, small }) {
   );
 }
 
-function Field({ label, name, value, onChange, type = 'text', required, options }) {
+function Field({ label, name, value, onChange, type = 'text', required, options, ...rest }) {
   return (
     <div>
       <label className="text-xs text-gray-500 mb-1 block">{label}{required && ' *'}</label>
@@ -29,6 +29,7 @@ function Field({ label, name, value, onChange, type = 'text', required, options 
         </select>
       ) : (
         <input name={name} type={type} value={value} onChange={onChange} required={required}
+          {...rest}
           className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-rose-300" />
       )}
     </div>
@@ -49,7 +50,7 @@ function UsersTab() {
 
   const startEdit = (u) => {
     setEditing(u.id);
-    setForm({ name: u.name, phone: u.phone || '', password: '' });
+    setForm({ name: u.customer?.name || '', phone: u.customer?.phone || '', password: '' });
   };
 
   const save = async () => {
@@ -97,9 +98,9 @@ function UsersTab() {
                   </td>
                 ) : (
                   <>
-                    <td className="py-2 pr-4 font-medium">{u.name}</td>
+                    <td className="py-2 pr-4 font-medium">{u.customer?.name}</td>
                     <td className="py-2 pr-4 text-gray-500">{u.email}</td>
-                    <td className="py-2 pr-4 text-gray-500">{u.phone || '-'}</td>
+                    <td className="py-2 pr-4 text-gray-500">{u.customer?.phone || '-'}</td>
                     <td className="py-2 flex gap-2">
                       <Btn small label="ແກ້ໄຂ" color="gray" onClick={() => startEdit(u)} />
                       <Btn small label="ລົບ" color="red" onClick={() => del(u.id)} />
@@ -116,7 +117,7 @@ function UsersTab() {
 }
 
 // ─── Employees Tab ───────────────────────────────────────────────────────────
-const EMPTY_EMP = { name: '', email: '', password: '', phone: '', position: '', role: 'staff', status: 'active', hire_date: '' };
+const EMPTY_EMP = { name: '', email: '', password: '', phone: '', gender: '', birthday: '', position: '', role: 'staff', status: 'active', hire_date: '', province_id: '', district_id: '', village_id: '', address_detail: '' };
 
 function EmployeesTab() {
   const [employees, setEmployees] = useState([]);
@@ -124,18 +125,45 @@ function EmployeesTab() {
   const [adding, setAdding] = useState(false);
   const [form, setForm] = useState(EMPTY_EMP);
   const [loading, setLoading] = useState(false);
+  const [provinces, setProvinces] = useState([]);
+  const [districts, setDistricts] = useState([]);
+  const [villages, setVillages] = useState([]);
 
   const load = useCallback(() => {
     api.get('/employees').then((r) => setEmployees(r.data)).catch(() => {});
   }, []);
   useEffect(load, [load]);
+  useEffect(() => { api.get('/provinces').then((r) => setProvinces(r.data)).catch(() => {}); }, []);
 
-  const onChange = (e) => setForm((f) => ({ ...f, [e.target.name]: e.target.value }));
+  const onChange = async (e) => {
+    const { name, value } = e.target;
+    if (name === 'province_id') {
+      setForm((f) => ({ ...f, province_id: value, district_id: '', village_id: '' }));
+      setDistricts([]); setVillages([]);
+      if (value) { const r = await api.get(`/districts?province_id=${value}`); setDistricts(r.data); }
+    } else if (name === 'district_id') {
+      setForm((f) => ({ ...f, district_id: value, village_id: '' }));
+      setVillages([]);
+      if (value) { const r = await api.get(`/villages?district_id=${value}`); setVillages(r.data); }
+    } else {
+      setForm((f) => ({ ...f, [name]: value }));
+    }
+  };
 
-  const startAdd = () => { setAdding(true); setEditing(null); setForm(EMPTY_EMP); };
-  const startEdit = (e) => {
+  const startAdd = () => { setAdding(true); setEditing(null); setForm(EMPTY_EMP); setDistricts([]); setVillages([]); };
+  const startEdit = async (e) => {
     setEditing(e.id); setAdding(false);
-    setForm({ name: e.name, email: e.email, password: '', phone: e.phone || '', position: e.position, role: e.role, status: e.status, hire_date: e.hire_date || '' });
+    setForm({
+      name: e.name, email: e.email, password: '', phone: e.phone || '',
+      gender: e.gender || '', birthday: e.birthday || '',
+      position: e.position, role: e.role, status: e.status, hire_date: e.hire_date || '',
+      province_id: String(e.address?.province_id || ''),
+      district_id: String(e.address?.district_id || ''),
+      village_id: String(e.address?.village_id || ''),
+      address_detail: e.address?.detail || '',
+    });
+    if (e.address?.province_id) { const r = await api.get(`/districts?province_id=${e.address.province_id}`); setDistricts(r.data); }
+    if (e.address?.district_id) { const r = await api.get(`/villages?district_id=${e.address.district_id}`); setVillages(r.data); }
   };
 
   const save = async () => {
@@ -157,34 +185,49 @@ function EmployeesTab() {
     catch (err) { alert(err.response?.data?.message || 'ເກີດຂໍ້ຜິດພາດ'); }
   };
 
-  const EmpForm = () => (
-    <div className="bg-gray-50 rounded-xl p-4 mb-4">
-      <div className="grid grid-cols-2 gap-2 mb-3">
-        <Field label="ຊື່" name="name" value={form.name} onChange={onChange} required />
-        <Field label="ອີເມລ" name="email" type="email" value={form.email} onChange={onChange} required={adding} />
-        <Field label={adding ? 'ລະຫັດຜ່ານ *' : 'ລະຫັດຜ່ານໃໝ່ (ບໍ່ບັງຄັບ)'} name="password" type="password" value={form.password} onChange={onChange} />
-        <Field label="ໂທ" name="phone" value={form.phone} onChange={onChange} />
-        <Field label="ຕຳແໜ່ງ" name="position" value={form.position} onChange={onChange} required />
-        <Field label="ວັນທີ່ເລີ່ມງານ" name="hire_date" type="date" value={form.hire_date} onChange={onChange} />
-        <Field label="ບົດບາດ" name="role" value={form.role} onChange={onChange}
-          options={[{ value: 'staff', label: 'Staff' }, { value: 'admin', label: 'Admin' }]} />
-        <Field label="ສະຖານະ" name="status" value={form.status} onChange={onChange}
-          options={[{ value: 'active', label: 'ໃຊ້ງານ' }, { value: 'inactive', label: 'ລະງັບ' }]} />
-      </div>
-      <div className="flex gap-2">
-        <Btn small label={adding ? 'ເພີ່ມພະນັກງານ' : 'ບັນທຶກ'} onClick={save} disabled={loading} />
-        <Btn small label="ຍົກເລີກ" color="gray" onClick={() => { setAdding(false); setEditing(null); }} />
-      </div>
-    </div>
-  );
-
   return (
     <div>
       <div className="flex justify-between items-center mb-3">
         <h2 className="font-semibold text-gray-700">ພະນັກງານ ({employees.length})</h2>
         <Btn small label="+ ເພີ່ມພະນັກງານ" onClick={startAdd} />
       </div>
-      {(adding || editing) && <EmpForm />}
+      {(adding || editing) && (
+        <div className="bg-gray-50 rounded-xl p-4 mb-4">
+          <div className="grid grid-cols-2 gap-2 mb-3">
+            <Field label="ຊື່" name="name" value={form.name} onChange={onChange} required />
+            <Field label="ອີເມລ" name="email" type="email" value={form.email} onChange={onChange} required={adding} />
+            <Field label={adding ? 'ລະຫັດຜ່ານ *' : 'ລະຫັດຜ່ານໃໝ່ (ບໍ່ບັງຄັບ)'} name="password" type="password" value={form.password} onChange={onChange} />
+            <Field label="ໂທ" name="phone" value={form.phone} onChange={onChange}
+              pattern="[0-9]{10,15}" minLength={10} maxLength={15}
+              title="ເບີໂທຕ້ອງມີຢ່າງໜ້ອຍ 10 ຕົວເລກ (ຕົວຢ່າງ: 02012345678)" />
+            <Field label="ເພດ" name="gender" value={form.gender} onChange={onChange}
+              options={[{ value: '', label: '-- ບໍ່ລະບຸ --' }, { value: 'male', label: 'ຊາຍ' }, { value: 'female', label: 'ຍິງ' }, { value: 'other', label: 'ອື່ນໆ' }]} />
+            <Field label="ວັນເດືອນປີເກີດ" name="birthday" type="date" value={form.birthday} onChange={onChange} />
+            <Field label="ຕຳແໜ່ງ" name="position" value={form.position} onChange={onChange} required />
+            <Field label="ວັນທີ່ເລີ່ມງານ" name="hire_date" type="date" value={form.hire_date} onChange={onChange} />
+            <Field label="ບົດບາດ" name="role" value={form.role} onChange={onChange}
+              options={[{ value: 'staff', label: 'Staff' }, { value: 'admin', label: 'Admin' }]} />
+            <Field label="ສະຖານະ" name="status" value={form.status} onChange={onChange}
+              options={[{ value: 'active', label: 'ໃຊ້ງານ' }, { value: 'inactive', label: 'ລະງັບ' }]} />
+          </div>
+
+          <p className="text-xs text-gray-400 mb-2">ທີ່ຢູ່ (ບໍ່ບັງຄັບ)</p>
+          <div className="grid grid-cols-3 gap-2 mb-2">
+            <Field label="ແຂວງ" name="province_id" value={form.province_id} onChange={onChange}
+              options={[{ value: '', label: '-- ເລືອກແຂວງ --' }, ...provinces.map((p) => ({ value: String(p.id), label: p.name }))]} />
+            <Field label="ເມືອງ" name="district_id" value={form.district_id} onChange={onChange}
+              options={[{ value: '', label: form.province_id ? '-- ເລືອກເມືອງ --' : '-- ເລືອກແຂວງກ່ອນ --' }, ...districts.map((d) => ({ value: String(d.id), label: d.name }))]} />
+            <Field label="ບ້ານ" name="village_id" value={form.village_id} onChange={onChange}
+              options={[{ value: '', label: form.district_id ? '-- ເລືອກບ້ານ --' : '-- ເລືອກເມືອງກ່ອນ --' }, ...villages.map((v) => ({ value: String(v.id), label: v.name }))]} />
+          </div>
+          <Field label="ລາຍລະອຽດທີ່ຢູ່ (ເຮືອນເລກທີ, ຖະໜົນ...)" name="address_detail" value={form.address_detail} onChange={onChange} />
+
+          <div className="flex gap-2 mt-3">
+            <Btn small label={adding ? 'ເພີ່ມພະນັກງານ' : 'ບັນທຶກ'} onClick={save} disabled={loading} />
+            <Btn small label="ຍົກເລີກ" color="gray" onClick={() => { setAdding(false); setEditing(null); }} />
+          </div>
+        </div>
+      )}
       <div className="overflow-x-auto">
         <table className="w-full text-sm">
           <thead><tr className="text-left text-gray-400 border-b text-xs">
@@ -214,7 +257,7 @@ function EmployeesTab() {
 }
 
 // ─── Rooms Tab ───────────────────────────────────────────────────────────────
-const EMPTY_ROOM = { room_number: '', room_type_id: '', floor: '1', status: 'available', image_url: '' };
+const EMPTY_ROOM = { room_number: '', room_type_id: '', floor: '1', status: 'available' };
 
 function RoomsTab() {
   const [rooms, setRooms] = useState([]);
@@ -223,6 +266,8 @@ function RoomsTab() {
   const [adding, setAdding] = useState(false);
   const [form, setForm] = useState(EMPTY_ROOM);
   const [loading, setLoading] = useState(false);
+  const [imageFile, setImageFile] = useState(null);
+  const [imagePreview, setImagePreview] = useState('');
 
   const load = useCallback(() => {
     Promise.all([api.get('/rooms'), api.get('/rooms/types')]).then(([r, t]) => { setRooms(r.data); setTypes(t.data); }).catch(() => {});
@@ -230,15 +275,31 @@ function RoomsTab() {
   useEffect(load, [load]);
 
   const onChange = (e) => setForm((f) => ({ ...f, [e.target.name]: e.target.value }));
-  const startAdd = () => { setAdding(true); setEditing(null); setForm(EMPTY_ROOM); };
-  const startEdit = (r) => { setEditing(r.id); setAdding(false); setForm({ room_number: r.room_number, room_type_id: String(r.room_type_id), floor: String(r.floor), status: r.status, image_url: r.image_url || '' }); };
+  const onImageChange = (e) => {
+    const file = e.target.files[0];
+    if (file) { setImageFile(file); setImagePreview(URL.createObjectURL(file)); }
+  };
+
+  const startAdd = () => { setAdding(true); setEditing(null); setForm(EMPTY_ROOM); setImageFile(null); setImagePreview(''); };
+  const startEdit = (r) => {
+    setEditing(r.id); setAdding(false);
+    setForm({ room_number: r.room_number, room_type_id: String(r.room_type_id), floor: String(r.floor), status: r.status });
+    setImageFile(null);
+    setImagePreview(r.image_url ? `http://localhost:5000${r.image_url}` : '');
+  };
 
   const save = async () => {
     setLoading(true);
     try {
-      if (adding) await api.post('/rooms', form);
-      else await api.put(`/rooms/${editing}`, form);
-      load(); setAdding(false); setEditing(null);
+      const fd = new FormData();
+      fd.append('room_number', form.room_number);
+      fd.append('room_type_id', form.room_type_id);
+      fd.append('floor', form.floor);
+      fd.append('status', form.status);
+      if (imageFile) fd.append('image', imageFile);
+      if (adding) await api.post('/rooms', fd);
+      else await api.put(`/rooms/${editing}`, fd);
+      load(); setAdding(false); setEditing(null); setImageFile(null); setImagePreview('');
     } catch (err) {
       alert(err.response?.data?.message || 'ເກີດຂໍ້ຜິດພາດ');
     } finally {
@@ -252,24 +313,6 @@ function RoomsTab() {
     catch (err) { alert(err.response?.data?.message || 'ເກີດຂໍ້ຜິດພາດ'); }
   };
 
-  const RoomForm = () => (
-    <div className="bg-gray-50 rounded-xl p-4 mb-4">
-      <div className="grid grid-cols-2 gap-2 mb-3">
-        <Field label="ເລກຫ້ອງ" name="room_number" value={form.room_number} onChange={onChange} required />
-        <Field label="ຊັ້ນ" name="floor" type="number" value={form.floor} onChange={onChange} />
-        <Field label="ປະເພດຫ້ອງ" name="room_type_id" value={form.room_type_id} onChange={onChange} required
-          options={types.map((t) => ({ value: String(t.id), label: `${t.name} (฿${t.price_per_hour}/ຊມ.)` }))} />
-        <Field label="ສະຖານະ" name="status" value={form.status} onChange={onChange}
-          options={[{ value: 'available', label: 'ວ່າງ' }, { value: 'occupied', label: 'ບໍ່ວ່າງ' }, { value: 'maintenance', label: 'ຊ່ອມບຳລຸງ' }]} />
-        <Field label="URL ຮູບພາບ" name="image_url" value={form.image_url} onChange={onChange} />
-      </div>
-      <div className="flex gap-2">
-        <Btn small label={adding ? 'ເພີ່ມຫ້ອງ' : 'ບັນທຶກ'} onClick={save} disabled={loading} />
-        <Btn small label="ຍົກເລີກ" color="gray" onClick={() => { setAdding(false); setEditing(null); }} />
-      </div>
-    </div>
-  );
-
   const statusColor = { available: 'bg-green-100 text-green-700', occupied: 'bg-red-100 text-red-600', maintenance: 'bg-yellow-100 text-yellow-700' };
   const statusText = { available: 'ວ່າງ', occupied: 'ບໍ່ວ່າງ', maintenance: 'ຊ່ອມ' };
 
@@ -279,7 +322,31 @@ function RoomsTab() {
         <h2 className="font-semibold text-gray-700">ຫ້ອງທັງໝົດ ({rooms.length})</h2>
         <Btn small label="+ ເພີ່ມຫ້ອງ" onClick={startAdd} />
       </div>
-      {(adding || editing) && <RoomForm />}
+      {(adding || editing) && (
+        <div className="bg-gray-50 rounded-xl p-4 mb-4">
+          <div className="grid grid-cols-2 gap-2 mb-3">
+            <Field label="ເລກຫ້ອງ" name="room_number" value={form.room_number} onChange={onChange} required />
+            <Field label="ຊັ້ນ" name="floor" type="number" value={form.floor} onChange={onChange} />
+            <Field label="ປະເພດຫ້ອງ" name="room_type_id" value={form.room_type_id} onChange={onChange} required
+              options={types.map((t) => ({ value: String(t.id), label: `${t.name} (฿${t.price_per_hour}/ຊມ.)` }))} />
+            <Field label="ສະຖານະ" name="status" value={form.status} onChange={onChange}
+              options={[{ value: 'available', label: 'ວ່າງ' }, { value: 'occupied', label: 'ບໍ່ວ່າງ' }, { value: 'maintenance', label: 'ຊ່ອມບຳລຸງ' }]} />
+          </div>
+          <div className="mb-3">
+            <label className="text-xs text-gray-500 mb-1 block">ຮູບພາບຫ້ອງ</label>
+            {imagePreview && (
+              <img src={imagePreview} alt="preview" className="h-32 rounded-lg object-cover mb-2 border" />
+            )}
+            <input type="file" accept="image/jpeg,image/png,image/webp" onChange={onImageChange}
+              className="w-full border rounded-lg px-3 py-2 text-sm text-gray-600 file:mr-3 file:py-1 file:px-3 file:rounded-lg file:border-0 file:text-xs file:bg-rose-50 file:text-[#7B2438] hover:file:bg-rose-100 cursor-pointer" />
+            <p className="text-xs text-gray-400 mt-1">JPG, PNG, WEBP — ບໍ່ເກີນ 5MB {!adding && imagePreview && '(ບໍ່ເລືອກໃໝ່ = ຄົງຮູບເດີມ)'}</p>
+          </div>
+          <div className="flex gap-2">
+            <Btn small label={adding ? 'ເພີ່ມຫ້ອງ' : 'ບັນທຶກ'} onClick={save} disabled={loading} />
+            <Btn small label="ຍົກເລີກ" color="gray" onClick={() => { setAdding(false); setEditing(null); }} />
+          </div>
+        </div>
+      )}
       <div className="overflow-x-auto">
         <table className="w-full text-sm">
           <thead><tr className="text-left text-gray-400 border-b text-xs">
@@ -344,28 +411,26 @@ function RoomTypesTab() {
     catch (err) { alert(err.response?.data?.message || 'ເກີດຂໍ້ຜິດພາດ'); }
   };
 
-  const TypeForm = () => (
-    <div className="bg-gray-50 rounded-xl p-4 mb-4">
-      <div className="grid grid-cols-2 gap-2 mb-3">
-        <Field label="ຊື່ປະເພດ" name="name" value={form.name} onChange={onChange} required />
-        <Field label="ຄວາມຈຸ (ຄົນ)" name="capacity" type="number" value={form.capacity} onChange={onChange} />
-        <Field label="ລາຄາ/ຊົ່ວໂມງ (ບາດ)" name="price_per_hour" type="number" value={form.price_per_hour} onChange={onChange} required />
-        <Field label="ຄຳອະທິບາຍ" name="description" value={form.description} onChange={onChange} />
-      </div>
-      <div className="flex gap-2">
-        <Btn small label={adding ? 'ເພີ່ມປະເພດ' : 'ບັນທຶກ'} onClick={save} disabled={loading} />
-        <Btn small label="ຍົກເລີກ" color="gray" onClick={() => { setAdding(false); setEditing(null); }} />
-      </div>
-    </div>
-  );
-
   return (
     <div>
       <div className="flex justify-between items-center mb-3">
         <h2 className="font-semibold text-gray-700">ປະເພດຫ້ອງ ({types.length})</h2>
         <Btn small label="+ ເພີ່ມປະເພດ" onClick={startAdd} />
       </div>
-      {(adding || editing) && <TypeForm />}
+      {(adding || editing) && (
+        <div className="bg-gray-50 rounded-xl p-4 mb-4">
+          <div className="grid grid-cols-2 gap-2 mb-3">
+            <Field label="ຊື່ປະເພດ" name="name" value={form.name} onChange={onChange} required />
+            <Field label="ຄວາມຈຸ (ຄົນ)" name="capacity" type="number" value={form.capacity} onChange={onChange} />
+            <Field label="ລາຄາ/ຊົ່ວໂມງ (ບາດ)" name="price_per_hour" type="number" value={form.price_per_hour} onChange={onChange} required />
+            <Field label="ຄຳອະທິບາຍ" name="description" value={form.description} onChange={onChange} />
+          </div>
+          <div className="flex gap-2">
+            <Btn small label={adding ? 'ເພີ່ມປະເພດ' : 'ບັນທຶກ'} onClick={save} disabled={loading} />
+            <Btn small label="ຍົກເລີກ" color="gray" onClick={() => { setAdding(false); setEditing(null); }} />
+          </div>
+        </div>
+      )}
       <div className="overflow-x-auto">
         <table className="w-full text-sm">
           <thead><tr className="text-left text-gray-400 border-b text-xs">

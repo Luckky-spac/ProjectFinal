@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../api/axios';
+import { useAuth } from '../context/AuthContext';
 
 const STATUS_CONFIG = {
   pending: { text: 'ລໍການຢືນຢັນ', cls: 'bg-yellow-100 text-yellow-700' },
@@ -192,7 +193,7 @@ function BookingRow({ booking, onUpdate }) {
             )}
           </div>
           <p className="text-xs text-gray-500 mt-0.5">
-            {booking.user?.name} · {formatDateTime(booking.start_time)} – {formatDateTime(booking.end_time)}
+            {booking.user?.customer?.name} · {formatDateTime(booking.start_time)} – {formatDateTime(booking.end_time)}
           </p>
         </div>
         <span className="text-sm font-bold text-[#7B2438] whitespace-nowrap">
@@ -205,8 +206,8 @@ function BookingRow({ booking, onUpdate }) {
       {expanded && (
         <div className="border-t px-4 py-3 flex flex-col gap-3 bg-gray-50">
           <div className="grid grid-cols-2 gap-2 text-sm text-gray-600">
-            <div><span className="text-gray-400">ຜູ້ຈອງ: </span>{booking.user?.name}</div>
-            <div><span className="text-gray-400">ໂທ: </span>{booking.user?.phone || '-'}</div>
+            <div><span className="text-gray-400">ຜູ້ຈອງ: </span>{booking.user?.customer?.name}</div>
+            <div><span className="text-gray-400">ໂທ: </span>{booking.user?.customer?.phone || '-'}</div>
             <div><span className="text-gray-400">ຜູ້ເຂົ້າໃຊ້: </span>{booking.guests} ຄົນ</div>
             <div><span className="text-gray-400">ມັດຈຳ: </span>฿{Number(booking.deposit_amount || 0).toLocaleString()}</div>
           </div>
@@ -274,15 +275,14 @@ function BookingRow({ booking, onUpdate }) {
   );
 }
 
-const SIDEBAR_NAV = [
-  { label: '📋 ການຈອງ', path: '/staff' },
-  { label: '🏠 ຫ້ອງ', path: '/admin' },
-  { label: '👤 ສະມາຊິກ', path: '/admin' },
+const ADMIN_NAV = [
+  { label: '🏠 ຫ້ອງ / ສະມາຊິກ', path: '/admin' },
   { label: '📊 ລາຍງານ', path: '/reports' },
 ];
 
 export default function StaffDashboardPage() {
   const navigate = useNavigate();
+  const { isAdmin } = useAuth();
   const [bookings, setBookings] = useState([]);
   const [loading, setLoading] = useState(true);
   const [tab, setTab] = useState('');
@@ -321,19 +321,26 @@ export default function StaffDashboardPage() {
           <p className="text-rose-300 text-xs mt-0.5">ລະບົບຈັດການ</p>
         </div>
         <nav className="flex flex-col py-2">
-          {SIDEBAR_NAV.map((item) => (
-            <button
-              key={item.label}
-              onClick={() => navigate(item.path)}
-              className={`text-left px-5 py-3 text-sm font-medium transition border-l-4 ${
-                item.path === '/staff'
-                  ? 'bg-rose-900 text-white border-white'
-                  : 'text-rose-300 border-transparent hover:bg-rose-900 hover:text-white'
-              }`}
-            >
-              {item.label}
-            </button>
-          ))}
+          <button
+            onClick={() => navigate('/staff')}
+            className="text-left px-5 py-3 text-sm font-medium transition border-l-4 bg-rose-900 text-white border-white"
+          >
+            📋 ການຈອງ
+          </button>
+          {isAdmin && (
+            <>
+              <div className="border-t border-rose-700 mt-2 pt-2" />
+              {ADMIN_NAV.map((item) => (
+                <button
+                  key={item.label}
+                  onClick={() => navigate(item.path)}
+                  className="text-left px-5 py-3 text-sm font-medium text-rose-300 border-l-4 border-transparent hover:bg-rose-900 hover:text-white transition"
+                >
+                  {item.label}
+                </button>
+              ))}
+            </>
+          )}
         </nav>
         {needAttention > 0 && (
           <div className="mx-4 mt-4 bg-orange-500 text-white rounded-xl px-3 py-2 text-xs text-center font-semibold">

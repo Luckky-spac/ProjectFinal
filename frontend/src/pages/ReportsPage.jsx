@@ -57,7 +57,7 @@ function BookingsReport() {
               {data.map((b) => (
                 <tr key={b.id} className="border-b last:border-0">
                   <td className="py-2 pr-3 font-medium">{b.room?.room_number}</td>
-                  <td className="py-2 pr-3 text-gray-600">{b.user?.name}</td>
+                  <td className="py-2 pr-3 text-gray-600">{b.user?.customer?.name}</td>
                   <td className="py-2 pr-3 text-gray-500 text-xs">{formatDateTime(b.start_time)}</td>
                   <td className="py-2 pr-3 text-gray-500 text-xs">{formatDateTime(b.end_time)}</td>
                   <td className="py-2 pr-3"><span className="text-xs bg-gray-100 px-2 py-0.5 rounded-full">{STATUS_LAO[b.status] || b.status}</span></td>

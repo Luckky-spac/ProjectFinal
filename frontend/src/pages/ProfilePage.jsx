@@ -3,15 +3,28 @@ import api from '../api/axios';
 import { useAuth } from '../context/AuthContext';
 
 export default function ProfilePage() {
-  const { user, login } = useAuth();
-  const [form, setForm] = useState({ name: '', phone: '', password: '', new_password: '', confirm_password: '' });
+  const { user, refreshUser } = useAuth();
+  const [form, setForm] = useState({
+    name: '', phone: '', gender: '', birthday: '', address: '',
+    password: '', new_password: '', confirm_password: '',
+  });
   const [loading, setLoading] = useState(false);
+  const [fetching, setFetching] = useState(true);
   const [success, setSuccess] = useState('');
   const [error, setError] = useState('');
 
   useEffect(() => {
-    if (user) setForm((f) => ({ ...f, name: user.name || '', phone: user.phone || '' }));
-  }, [user]);
+    api.get('/auth/me').then(({ data }) => {
+      setForm((f) => ({
+        ...f,
+        name: data.name || '',
+        phone: data.phone || '',
+        gender: data.gender || '',
+        birthday: data.birthday || '',
+        address: data.address || '',
+      }));
+    }).finally(() => setFetching(false));
+  }, []);
 
   const handleChange = (e) => setForm((f) => ({ ...f, [e.target.name]: e.target.value }));
 
@@ -27,15 +40,22 @@ export default function ProfilePage() {
 
     setLoading(true);
     try {
-      const payload = { name: form.name, phone: form.phone };
+      const payload = {
+        name: form.name,
+        phone: form.phone,
+        gender: form.gender || undefined,
+        birthday: form.birthday || undefined,
+        address: form.address || undefined,
+      };
       if (form.new_password) {
         payload.password = form.password;
         payload.new_password = form.new_password;
       }
-      const res = await api.put('/auth/profile', payload);
-      login(res.data, localStorage.getItem('token'));
-      setSuccess('ບັນທຶກຂໍ້ມູນສຳເລັດ');
+      await api.put('/auth/profile', payload);
+      await refreshUser();
+      setSuccess('✅ ບັນທຶກຂໍ້ມູນສຳເລັດ!');
       setForm((f) => ({ ...f, password: '', new_password: '', confirm_password: '' }));
+      window.scrollTo({ top: 0, behavior: 'smooth' });
     } catch (err) {
       setError(err.response?.data?.message || 'ເກີດຂໍ້ຜິດພາດ');
     } finally {
@@ -44,6 +64,10 @@ export default function ProfilePage() {
   };
 
   const inputCls = 'w-full border rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-rose-300';
+
+  if (fetching) {
+    return <div className="min-h-screen bg-green-50 flex items-center justify-center text-gray-400">ກຳລັງໂຫຼດ...</div>;
+  }
 
   return (
     <div className="min-h-screen bg-green-50 py-10 px-4">
@@ -54,23 +78,45 @@ export default function ProfilePage() {
         {error && <div className="mb-4 bg-red-50 text-red-600 text-sm px-4 py-2 rounded-lg">{error}</div>}
 
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+
+          {/* ข้อมูลบัญชี */}
           <div>
             <label className="text-sm text-gray-600 mb-1 block">ອີເມລ</label>
             <input value={user?.email || ''} disabled
               className="w-full border rounded-xl px-4 py-2.5 text-sm bg-gray-50 text-gray-400 cursor-not-allowed" />
           </div>
           <div>
-            <label className="text-sm text-gray-600 mb-1 block">ຊື່</label>
+            <label className="text-sm text-gray-600 mb-1 block">ຊື່ ແລະ ນາມສະກຸນ</label>
             <input name="name" value={form.name} onChange={handleChange} required className={inputCls} />
           </div>
           <div>
             <label className="text-sm text-gray-600 mb-1 block">ເບີໂທ</label>
-            <input name="phone" value={form.phone} onChange={handleChange} className={inputCls} />
+            <input name="phone" value={form.phone} onChange={handleChange} required className={inputCls} placeholder="020-xxx-xxxx" />
           </div>
 
+          {/* ข้อมูลเพิ่มเติม */}
+          <div>
+            <label className="text-sm text-gray-600 mb-1 block">ເພດ</label>
+            <select name="gender" value={form.gender} onChange={handleChange} className={inputCls}>
+              <option value="">-- ບໍ່ລະບຸ --</option>
+              <option value="male">ຊາຍ</option>
+              <option value="female">ຍິງ</option>
+              <option value="other">ອື່ນໆ</option>
+            </select>
+          </div>
+          <div>
+            <label className="text-sm text-gray-600 mb-1 block">ວັນເດືອນປີເກີດ</label>
+            <input name="birthday" type="date" value={form.birthday} onChange={handleChange} className={inputCls} />
+          </div>
+          <div>
+            <label className="text-sm text-gray-600 mb-1 block">ທີ່ຢູ່</label>
+            <textarea name="address" value={form.address} onChange={handleChange} rows={2}
+              className={inputCls} placeholder="ບ້ານ, ເມືອງ, ແຂວງ..." />
+          </div>
+
+          {/* เปลี่ยนรหัสผ่าน */}
           <hr className="my-1" />
           <p className="text-sm text-gray-400">ປ່ຽນລະຫັດຜ່ານ (ບໍ່ບັງຄັບ)</p>
-
           <div>
             <label className="text-sm text-gray-600 mb-1 block">ລະຫັດຜ່ານເກົ່າ</label>
             <input name="password" type="password" value={form.password} onChange={handleChange} className={inputCls} />

@@ -1,6 +1,6 @@
 require('dotenv').config();
 const bcrypt = require('bcryptjs');
-const { sequelize, User, Employee, RoomType, Room, Booking, Payment, Review, RoomTransfer } = require('./models');
+const { sequelize, User, Customer, Employee, Province, District, Village, Address, RoomType, Room, Booking, Payment, Review, RoomTransfer } = require('./models');
 
 async function seed() {
   await sequelize.sync({ alter: true });
@@ -28,6 +28,95 @@ async function seed() {
     await RoomType.destroy({ where: { name } });
   }
 
+  // ─── Provinces ────────────────────────────────────────────────────────────
+  const provincesData = [
+    { id: 1, name: 'ນະຄອນຫຼວງວຽງຈັນ' },
+    { id: 2, name: 'ແຂວງວຽງຈັນ' },
+    { id: 3, name: 'ແຂວງຫຼວງພະບາງ' },
+    { id: 4, name: 'ແຂວງສະຫວັນນະເຂດ' },
+    { id: 5, name: 'ແຂວງຈຳປາສັກ' },
+  ];
+  const provinces = {};
+  for (const p of provincesData) {
+    const [prov] = await Province.findOrCreate({ where: { id: p.id }, defaults: { name: p.name } });
+    await prov.update({ name: p.name });
+    provinces[p.id] = prov;
+  }
+  console.log('Provinces seeded');
+
+  // ─── Districts ────────────────────────────────────────────────────────────
+  const districtsData = [
+    // ນະຄອນຫຼວງວຽງຈັນ
+    { id: 1,  name: 'ຈັນທະບູລີ',    province_id: 1 },
+    { id: 2,  name: 'ສີໂຄດຕະບອງ',  province_id: 1 },
+    { id: 3,  name: 'ໄຊເສດຖາ',      province_id: 1 },
+    { id: 4,  name: 'ສີສັດຕະນາກ',   province_id: 1 },
+    // ແຂວງວຽງຈັນ
+    { id: 5,  name: 'ທ່ານາແລງ',     province_id: 2 },
+    { id: 6,  name: 'ວັງວຽງ',        province_id: 2 },
+    // ແຂວງຫຼວງພະບາງ
+    { id: 7,  name: 'ຫຼວງພະບາງ',    province_id: 3 },
+    { id: 8,  name: 'ຊຽງງາ',         province_id: 3 },
+    // ແຂວງສະຫວັນນະເຂດ
+    { id: 9,  name: 'ໄຊບູລີ',       province_id: 4 },
+    { id: 10, name: 'ຄັນທະບູລີ',    province_id: 4 },
+    // ແຂວງຈຳປາສັກ
+    { id: 11, name: 'ປາກເຊ',         province_id: 5 },
+    { id: 12, name: 'ໂຂງ',           province_id: 5 },
+  ];
+  const districts = {};
+  for (const d of districtsData) {
+    const [dist] = await District.findOrCreate({ where: { id: d.id }, defaults: { name: d.name, province_id: d.province_id } });
+    await dist.update({ name: d.name, province_id: d.province_id });
+    districts[d.id] = dist;
+  }
+  console.log('Districts seeded');
+
+  // ─── Villages ─────────────────────────────────────────────────────────────
+  const villagesData = [
+    // ຈັນທະບູລີ
+    { id: 1,  name: 'ບ້ານໂນນສະຫວ່າງ',  district_id: 1 },
+    { id: 2,  name: 'ບ້ານທ່າດ່ານ',       district_id: 1 },
+    // ສີໂຄດຕະບອງ
+    { id: 3,  name: 'ບ້ານທາດຫຼວງ',      district_id: 2 },
+    { id: 4,  name: 'ບ້ານໂພນສີ',         district_id: 2 },
+    // ໄຊເສດຖາ
+    { id: 5,  name: 'ບ້ານດອນກອຍ',       district_id: 3 },
+    { id: 6,  name: 'ບ້ານໂດນໜູນ',       district_id: 3 },
+    // ສີສັດຕະນາກ
+    { id: 7,  name: 'ບ້ານໂນນສົມບູນ',    district_id: 4 },
+    { id: 8,  name: 'ບ້ານທ່ານາ',         district_id: 4 },
+    // ທ່ານາແລງ
+    { id: 9,  name: 'ບ້ານຫ້ວຍຊາຍ',      district_id: 5 },
+    { id: 10, name: 'ບ້ານນາຄຳ',          district_id: 5 },
+    // ວັງວຽງ
+    { id: 11, name: 'ບ້ານວຽງຄຳ',        district_id: 6 },
+    // ຫຼວງພະບາງ
+    { id: 12, name: 'ບ້ານວັດໄຊ',         district_id: 7 },
+    { id: 13, name: 'ບ້ານທ່າໄຊ',         district_id: 7 },
+    // ປາກເຊ
+    { id: 14, name: 'ບ້ານຫ້ວຍຈຳ',        district_id: 11 },
+    { id: 15, name: 'ບ້ານໂນນຄຳ',         district_id: 11 },
+  ];
+  const villages = {};
+  for (const v of villagesData) {
+    const [vil] = await Village.findOrCreate({ where: { id: v.id }, defaults: { name: v.name, district_id: v.district_id } });
+    await vil.update({ name: v.name, district_id: v.district_id });
+    villages[v.id] = vil;
+  }
+  console.log('Villages seeded');
+
+  // ─── Addresses ────────────────────────────────────────────────────────────
+  const [addr_admin] = await Address.findOrCreate({
+    where: { village_id: 1, district_id: 1, province_id: 1 },
+    defaults: { detail: 'ເຮືອນເລກທີ 001', village_id: 1, district_id: 1, province_id: 1 },
+  });
+  const [addr_staff] = await Address.findOrCreate({
+    where: { village_id: 3, district_id: 2, province_id: 1 },
+    defaults: { detail: 'ເຮືອນເລກທີ 025', village_id: 3, district_id: 2, province_id: 1 },
+  });
+  console.log('Addresses seeded');
+
   // ─── Employees ────────────────────────────────────────────────────────────
   const [admin] = await Employee.findOrCreate({
     where: { email: 'admin@karaoke.com' },
@@ -42,7 +131,7 @@ async function seed() {
       hire_date: '2024-01-01',
     },
   });
-  await admin.update({ name: 'ເຈົ້າຂອງຮ້ານ', phone: '0800000001', position: 'ເຈົ້າຂອງ', role: 'admin', status: 'active' });
+  await admin.update({ name: 'ເຈົ້າຂອງຮ້ານ', phone: '0800000001', position: 'ເຈົ້າຂອງ', role: 'admin', status: 'active', address_id: addr_admin.id });
 
   const [staff] = await Employee.findOrCreate({
     where: { email: 'staff@karaoke.com' },
@@ -57,34 +146,38 @@ async function seed() {
       hire_date: '2024-03-01',
     },
   });
-  await staff.update({ name: 'ສົມສີ ພະນັກງານ', phone: '0800000002', position: 'ພະນັກງານຕ້ອນຮັບ', role: 'staff', status: 'active' });
+  await staff.update({ name: 'ສົມສີ ພະນັກງານ', phone: '0800000002', position: 'ພະນັກງານຕ້ອນຮັບ', role: 'staff', status: 'active', address_id: addr_staff.id });
 
-  // ─── Users ────────────────────────────────────────────────────────────────
+  // ─── Users + Customers ────────────────────────────────────────────────────
   const [member] = await User.findOrCreate({
     where: { email: 'member@karaoke.com' },
     defaults: {
-      name: 'ສົມໄຊ ລູກຄ້າ',
       email: 'member@karaoke.com',
       password: await hash('member1234'),
-      phone: '0800000003',
       role: 'member',
     },
   });
-  await member.update({ name: 'ສົມໄຊ ລູກຄ້າ', phone: '0800000003' });
+  await Customer.findOrCreate({
+    where: { user_id: member.id },
+    defaults: { user_id: member.id, name: 'ສົມໄຊ ລູກຄ້າ', phone: '0800000003' },
+  });
+  await Customer.update({ name: 'ສົມໄຊ ລູກຄ້າ', phone: '0800000003' }, { where: { user_id: member.id } });
 
   const [member2] = await User.findOrCreate({
     where: { email: 'member2@karaoke.com' },
     defaults: {
-      name: 'ສົມຍິງ ລູກຄ້າ',
       email: 'member2@karaoke.com',
       password: await hash('member1234'),
-      phone: '0800000004',
       role: 'member',
     },
   });
-  await member2.update({ name: 'ສົມຍິງ ລູກຄ້າ', phone: '0800000004' });
+  await Customer.findOrCreate({
+    where: { user_id: member2.id },
+    defaults: { user_id: member2.id, name: 'ສົມຍິງ ລູກຄ້າ', phone: '0800000004' },
+  });
+  await Customer.update({ name: 'ສົມຍິງ ລູກຄ້າ', phone: '0800000004' }, { where: { user_id: member2.id } });
 
-  console.log('Users & Employees seeded');
+  console.log('Users & Customers seeded');
 
   // ─── Room Types (3 ประเภท ชื่อภาษาลาว) ──────────────────────────────────
   const [small] = await RoomType.findOrCreate({

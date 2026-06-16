@@ -28,12 +28,6 @@ export default function Navbar() {
               {isEmployee ? (
                 <>
                   <Link to="/staff" className="text-rose-200 hover:text-white transition">DASHBOARD</Link>
-                  {isAdmin && (
-                    <>
-                      <Link to="/admin" className="text-rose-200 hover:text-white transition">ADMIN</Link>
-                      <Link to="/reports" className="text-rose-200 hover:text-white transition">REPORTS</Link>
-                    </>
-                  )}
                 </>
               ) : (
                 <>

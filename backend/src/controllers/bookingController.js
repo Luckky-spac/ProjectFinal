@@ -1,9 +1,9 @@
 const { Op } = require('sequelize');
-const { Booking, Room, RoomType, Payment, User, RoomTransfer } = require('../models');
+const { Booking, Room, RoomType, Payment, User, Customer, RoomTransfer } = require('../models');
 
 const bookingIncludes = [
   { model: Room, as: 'room', include: [{ model: RoomType, as: 'roomType' }] },
-  { model: User, as: 'user', attributes: ['id', 'name', 'email', 'phone'] },
+  { model: User, as: 'user', attributes: ['id', 'email'], include: [{ model: Customer, as: 'customer', attributes: ['name', 'phone'] }] },
   { model: Payment, as: 'payments' },
 ];
 

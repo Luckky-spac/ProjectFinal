@@ -10,7 +10,10 @@ const Employee = sequelize.define('Employee', {
   position: { type: DataTypes.STRING(100), allowNull: false },
   role: { type: DataTypes.ENUM('admin', 'staff'), defaultValue: 'staff' },
   status: { type: DataTypes.ENUM('active', 'inactive'), defaultValue: 'active' },
+  gender: { type: DataTypes.ENUM('male', 'female', 'other') },
+  birthday: { type: DataTypes.DATEONLY },
   hire_date: { type: DataTypes.DATEONLY },
+  address_id: { type: DataTypes.INTEGER, allowNull: true },
 }, {
   tableName: 'employees',
   timestamps: true,

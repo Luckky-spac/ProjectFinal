@@ -1,4 +1,5 @@
 import { createContext, useContext, useState, useEffect } from 'react';
+import api from '../api/axios';
 
 const AuthContext = createContext(null);
 
@@ -24,13 +25,25 @@ export function AuthProvider({ children }) {
     setUser(null);
   };
 
+  const refreshUser = async () => {
+    try {
+      const { data } = await api.get('/auth/me');
+      const updated = { ...data, type: data.type };
+      localStorage.setItem('user', JSON.stringify(updated));
+      setUser(updated);
+    } catch {
+      // token หมดอายุหรือ error → logout
+      logout();
+    }
+  };
+
   // helper flags
   const isEmployee = user?.type === 'employee';
   const isAdmin = user?.role === 'admin';
   const isStaff = user?.role === 'staff' || user?.role === 'admin';
 
   return (
-    <AuthContext.Provider value={{ user, login, logout, loading, isEmployee, isAdmin, isStaff }}>
+    <AuthContext.Provider value={{ user, login, logout, refreshUser, loading, isEmployee, isAdmin, isStaff }}>
       {children}
     </AuthContext.Provider>
   );

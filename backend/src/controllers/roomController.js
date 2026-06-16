@@ -78,16 +78,17 @@ const getRoomTypes = async (req, res) => {
 // POST /api/rooms (Admin)
 const createRoom = async (req, res) => {
   try {
-    const { room_number, room_type_id, floor, status, image_url } = req.body;
+    const { room_number, room_type_id, floor, status } = req.body;
     if (!room_number || !room_type_id) {
-      return res.status(400).json({ message: 'กรุณากรอกเลขห้องและประเภทห้อง' });
+      return res.status(400).json({ message: 'ກະລຸນາກອກເລກຫ້ອງ ແລະ ປະເພດຫ້ອງ' });
     }
+    const image_url = req.file ? `/uploads/${req.file.filename}` : null;
     const room = await Room.create({ room_number, room_type_id, floor, status, image_url });
     const full = await Room.findByPk(room.id, { include: [{ model: RoomType, as: 'roomType' }] });
     res.status(201).json(full);
   } catch (err) {
     if (err.name === 'SequelizeUniqueConstraintError') {
-      return res.status(400).json({ message: 'เลขห้องนี้มีอยู่แล้ว' });
+      return res.status(400).json({ message: 'ເລກຫ້ອງນີ້ມີຢູ່ແລ້ວ' });
     }
     res.status(500).json({ message: err.message });
   }
@@ -97,14 +98,15 @@ const createRoom = async (req, res) => {
 const updateRoom = async (req, res) => {
   try {
     const room = await Room.findByPk(req.params.id);
-    if (!room) return res.status(404).json({ message: 'ไม่พบห้องนี้' });
-    const { room_number, room_type_id, floor, status, image_url } = req.body;
+    if (!room) return res.status(404).json({ message: 'ບໍ່ພົບຫ້ອງນີ້' });
+    const { room_number, room_type_id, floor, status } = req.body;
+    const image_url = req.file ? `/uploads/${req.file.filename}` : room.image_url;
     await room.update({ room_number, room_type_id, floor, status, image_url });
     const full = await Room.findByPk(room.id, { include: [{ model: RoomType, as: 'roomType' }] });
     res.json(full);
   } catch (err) {
     if (err.name === 'SequelizeUniqueConstraintError') {
-      return res.status(400).json({ message: 'เลขห้องนี้มีอยู่แล้ว' });
+      return res.status(400).json({ message: 'ເລກຫ້ອງນີ້ມີຢູ່ແລ້ວ' });
     }
     res.status(500).json({ message: err.message });
   }

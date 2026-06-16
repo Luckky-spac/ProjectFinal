@@ -1,12 +1,40 @@
 const sequelize = require('../config/database');
 const User = require('./User');
+const Customer = require('./Customer');
 const Employee = require('./Employee');
+const Province = require('./Province');
+const District = require('./District');
+const Village = require('./Village');
+const Address = require('./Address');
 const RoomType = require('./RoomType');
 const Room = require('./Room');
 const Booking = require('./Booking');
 const Payment = require('./Payment');
 const RoomTransfer = require('./RoomTransfer');
 const Review = require('./Review');
+
+// User 1:1 Customer
+User.hasOne(Customer, { foreignKey: 'user_id', as: 'customer', onDelete: 'CASCADE' });
+Customer.belongsTo(User, { foreignKey: 'user_id', as: 'user' });
+
+// Province -> District -> Village -> Address -> Employee
+Province.hasMany(District, { foreignKey: 'province_id', as: 'districts' });
+District.belongsTo(Province, { foreignKey: 'province_id', as: 'province' });
+
+District.hasMany(Village, { foreignKey: 'district_id', as: 'villages' });
+Village.belongsTo(District, { foreignKey: 'district_id', as: 'district' });
+
+Province.hasMany(Address, { foreignKey: 'province_id', as: 'addresses' });
+Address.belongsTo(Province, { foreignKey: 'province_id', as: 'province' });
+
+District.hasMany(Address, { foreignKey: 'district_id', as: 'addresses' });
+Address.belongsTo(District, { foreignKey: 'district_id', as: 'district' });
+
+Village.hasMany(Address, { foreignKey: 'village_id', as: 'addresses' });
+Address.belongsTo(Village, { foreignKey: 'village_id', as: 'village' });
+
+Address.hasMany(Employee, { foreignKey: 'address_id', as: 'employees' });
+Employee.belongsTo(Address, { foreignKey: 'address_id', as: 'address' });
 
 // RoomType <-> Room
 RoomType.hasMany(Room, { foreignKey: 'room_type_id', as: 'rooms' });
@@ -50,4 +78,4 @@ Review.belongsTo(User, { foreignKey: 'user_id', as: 'user' });
 Room.hasMany(Review, { foreignKey: 'room_id', as: 'reviews' });
 Review.belongsTo(Room, { foreignKey: 'room_id', as: 'room' });
 
-module.exports = { sequelize, User, Employee, RoomType, Room, Booking, Payment, RoomTransfer, Review };
+module.exports = { sequelize, User, Customer, Employee, Province, District, Village, Address, RoomType, Room, Booking, Payment, RoomTransfer, Review };
