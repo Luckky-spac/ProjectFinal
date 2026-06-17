@@ -1,144 +1,118 @@
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-
-// ข้อมูลห้องแสดงหน้าแรก (static — ตรงกับ seed)
-const ROOMS = [
-  {
-    num: 1,
-    size: 'S',
-    nameLao: 'ຫ້ອງນ້ອຍ',
-    capacity: '4',
-    price: '300',
-    // TODO: เปลี่ยน null เป็น path รูปภาพ เช่น '/images/room-s-1.jpg'
-    photos: [null, null],
-  },
-  {
-    num: 2,
-    size: 'M',
-    nameLao: 'ຫ້ອງກາງ',
-    capacity: '8',
-    price: '500',
-    // TODO: เปลี่ยน null เป็น path รูปภาพ เช่น '/images/room-m-1.jpg'
-    photos: [null, null],
-  },
-  {
-    num: 3,
-    size: 'L',
-    nameLao: 'ຫ້ອງໃຫຍ່',
-    capacity: '15',
-    price: '800',
-    // TODO: เปลี่ยน null เป็น path รูปภาพ เช่น '/images/room-l-1.jpg'
-    photos: [null, null],
-  },
-];
+import api from '../api/axios';
 
 export default function HomePage() {
   const navigate = useNavigate();
+  const [roomL, setRoomL] = useState(null);
+
+  useEffect(() => {
+    api.get('/rooms').then((r) => {
+      const largest = r.data.reduce((max, room) =>
+        (room.roomType?.capacity > (max?.roomType?.capacity ?? 0) ? room : max), null);
+      setRoomL(largest);
+    }).catch(() => {});
+  }, []);
 
   return (
-    <div className="min-h-screen bg-green-50">
+    <div className="relative min-h-screen flex flex-col">
 
-      {/* ─── Hero Banner ──────────────────────────────────────────────────── */}
-      <section>
-        {/*
-          TODO: ใส่รูปภาพ Hero Banner ของ Latsavong ที่นี่
-          เปลี่ยนบล็อก <div className="bg-gray-300 ..."> ด้านล่างเป็น:
-          <img src="/images/hero-banner.jpg" alt="Latsavong Hero" className="w-full h-72 object-cover" />
-          แนะนำ: วางรูปไว้ที่ frontend/public/images/hero-banner.jpg
-        */}
-        <div className="bg-gray-300 h-72 flex items-center justify-center overflow-hidden">
-          <div className="text-center text-gray-500">
-            <div className="text-8xl mb-3">🎤</div>
-            <p className="text-sm font-medium tracking-wide">[ รูปภาพ Hero Banner — Latsavong Hotel ]</p>
-            <p className="text-xs mt-1 text-gray-400">แนะนำขนาด 1200 × 400 px</p>
+      {/* Background Image */}
+      <img
+        src="/images/hero.jpeg"
+        alt="Latsavong Wanda Vista Hotel"
+        className="fixed inset-0 w-full h-full object-cover -z-10"
+      />
+      <div className="fixed inset-0 bg-black/55 -z-10" />
+
+      {/* Title — top */}
+      <div className="flex flex-col items-center pt-12 text-white text-center px-4">
+        <h1 className="text-2xl md:text-3xl font-bold drop-shadow mb-1">
+          ຍິນດີຕ້ອນຮັບສູ່ລະບົບຈອງຫ້ອງຄາຣາໂອເກະ
+        </h1>
+        <p className="text-rose-300 text-sm drop-shadow">Latsavong Wanda Vista Hotel</p>
+      </div>
+
+      {/* Content — bottom */}
+      <div className="flex-1 flex flex-col items-center justify-end px-4 pb-16 text-white text-center">
+
+        {/* Room L Card */}
+        {roomL && (
+          <p className="text-white text-base font-bold tracking-widest mb-2 drop-shadow">✨ ຫ້ອງແນະນຳ</p>
+        )}
+        {roomL && (
+          <div className="bg-white/10 backdrop-blur-sm border border-white/20 rounded-2xl overflow-hidden w-64 mb-5 shadow-xl">
+            {roomL.image_url ? (
+              <img src={roomL.image_url} alt={`ຫ້ອງ ${roomL.room_number}`} className="w-full h-32 object-cover" />
+            ) : (
+              <div className="w-full h-32 bg-white/10 flex items-center justify-center text-white/40 text-3xl">🎤</div>
+            )}
+            <div className="p-3 text-left">
+              <h2 className="font-bold text-white text-sm mb-1">ຫ້ອງ {roomL.room_number} — {roomL.roomType?.name}</h2>
+              <div className="flex gap-3 text-rose-200 text-xs">
+                <span>👤 {roomL.roomType?.capacity} ທ່ານ</span>
+                <span>💲 ฿{Number(roomL.roomType?.price_per_hour).toLocaleString()}/ຊມ.</span>
+              </div>
+            </div>
           </div>
-        </div>
+        )}
 
-        {/* Welcome Bar */}
-        <div className="bg-[#7B2438] py-6 text-center text-white px-4">
-          <h1 className="text-xl font-bold tracking-wide">ຍິນດີຕ້ອນຮັບສູ່ລະບົບຈອງຫ້ອງຄາຣາໂອເກະຂອງໂຮງແຮມລາດສະວົງ</h1>
+        {/* Buttons */}
+        <div className="flex gap-3">
+          {roomL && (
+            <button
+              onClick={() => navigate(`/rooms/${roomL.r_id}`)}
+              className="bg-white text-[#7B2438] px-6 py-2.5 rounded-xl font-bold text-sm hover:bg-rose-100 transition shadow-lg"
+            >
+              ລາຍລະອຽດ →
+            </button>
+          )}
           <button
             onClick={() => navigate('/rooms')}
-            className="mt-4 bg-white text-[#7B2438] px-6 py-2 rounded-lg font-bold text-sm hover:bg-rose-100 transition shadow"
+            className="border border-white text-white px-6 py-2.5 rounded-xl font-semibold text-sm hover:bg-white/10 transition"
           >
-            ເບິ່ງຫ້ອງທັງໝົດ →
+            ຫ້ອງທັງໝົດ
           </button>
         </div>
-      </section>
+      </div>
 
-      {/* ─── Room Cards ───────────────────────────────────────────────────── */}
-      <section className="max-w-xl mx-auto px-4 py-8 flex flex-col gap-6">
-        {ROOMS.map((room) => (
-          <div
-            key={room.size}
-            className="bg-rose-100 rounded-2xl overflow-hidden shadow-md border border-rose-200"
-          >
-            {/* Card Header */}
-            <div className="flex items-center justify-between px-5 pt-4 pb-2">
-              <h2 className="font-bold text-[#7B2438] text-base">
-                ຫ້ອງຄາຣາໂອເກະຫ້ອງທີ {room.num}
-              </h2>
-              <button
-                onClick={() => navigate('/rooms')}
-                title="ເບິ່ງລາຍລະອຽດ ແລະ ຈອງ"
-                className="text-[#7B2438] hover:text-rose-900 text-xl transition"
-              >
-                📅
-              </button>
-            </div>
+      {/* Footer */}
+      <footer className="relative z-10 bg-[#f5f0e8] text-[#7B2438] px-6 py-4">
+        <div className="max-w-3xl mx-auto grid grid-cols-3 gap-4 text-xs mb-3">
 
-            {/* Info Row */}
-            <div className="flex gap-4 px-5 pb-3 text-sm text-[#7B2438] font-medium flex-wrap">
-              <span>🏠 <strong>SIZE {room.size}</strong></span>
-              <span>👤 ບັບຈຸໄດ້ {room.capacity} ທ່ານ</span>
-              <span>💲 ຈາກ ฿{room.price}/ຊົ່ວໂມງ</span>
-            </div>
+          {/* Location */}
+          <div>
+            <p className="font-bold mb-1">Location</p>
+            <p className="text-[11px] text-[#5a1a28] leading-4">
+              Latsavong Wanda Vista Hotel<br />
+              Nongbone Road<br />
+              Sikhottabong District<br />
+              Vientiane, Laos
+            </p>
+          </div>
 
-            {/* Photos — 2 ช่อง */}
-            <div className="grid grid-cols-2 gap-2 px-5 pb-3">
-              {room.photos.map((photo, i) => (
-                <div
-                  key={i}
-                  className="bg-gray-300 h-36 rounded-xl flex items-center justify-center overflow-hidden"
-                >
-                  {photo ? (
-                    <img
-                      src={photo}
-                      alt={`${room.nameLao} รูปที่ ${i + 1}`}
-                      className="w-full h-full object-cover"
-                    />
-                  ) : (
-                    /*
-                      TODO: ใส่รูปห้อง SIZE {room.size} รูปที่ {i + 1}
-                      วิธีใส่รูป:
-                        1. วางรูปใน frontend/public/images/
-                        2. แก้ photos array ข้างบนใน ROOMS
-                           เช่น photos: ['/images/room-s-1.jpg', '/images/room-s-2.jpg']
-                    */
-                    <span className="text-gray-400 text-xs text-center px-2 leading-5">
-                      [ ຮູບຫ້ອງ {room.nameLao} ]
-                    </span>
-                  )}
-                </div>
-              ))}
-            </div>
-
-            {/* Footer */}
-            <div className="px-5 pb-4 flex items-center justify-between">
-              <span className="text-xs text-rose-400 italic">{room.nameLao}</span>
-              <button
-                onClick={() => navigate('/rooms')}
-                className="text-sm text-[#7B2438] underline font-semibold hover:text-rose-900 transition"
-              >
-                ລາຍລະອຽດ →
-              </button>
+          {/* Contact */}
+          <div>
+            <p className="font-bold mb-1">Contact Us</p>
+            <div className="flex flex-col gap-1 text-[11px] text-[#5a1a28]">
+              <span className="flex items-center gap-1.5"><span>📘</span> Facebook : Latsavong Hotel</span>
+              <span className="flex items-center gap-1.5"><span>📞</span> Phone : +856 21 123 456</span>
+              <span className="flex items-center gap-1.5"><span>✉️</span> latsavong@gmail.com</span>
             </div>
           </div>
-        ))}
-      </section>
 
-      {/* ─── Footer ───────────────────────────────────────────────────────── */}
-      <footer className="bg-[#7B2438] text-rose-300 text-center text-xs py-4 mt-4">
-        © 2025 Latsavong Booking System · All rights reserved
+          {/* Opening */}
+          <div>
+            <p className="font-bold mb-1">Opening</p>
+            <span className="flex items-center gap-1.5 text-[11px] text-[#5a1a28]">
+              <span>🕐</span> 24-hour front desk
+            </span>
+          </div>
+        </div>
+
+        <div className="border-t border-[#d9c9b0] pt-2 text-center text-[10px] text-[#9a6a5a]">
+          © 2025 Latsavong Wanda Vista Hotel · All rights reserved
+        </div>
       </footer>
     </div>
   );
