@@ -78,8 +78,11 @@ const createRoom = async (req, res) => {
     if (!room_number || !room_type_id) {
       return res.status(400).json({ message: 'ກະລຸນາກອກເລກຫ້ອງ ແລະ ປະເພດຫ້ອງ' });
     }
-    const image_url = req.file ? `/uploads/${req.file.filename}` : null;
-    const room = await Room.create({ room_number, rtype_id: room_type_id, floor, status, image_url });
+    const image_url  = req.files?.image?.[0]  ? `/uploads/${req.files.image[0].filename}`  : null;
+    const image_url2 = req.files?.image2?.[0] ? `/uploads/${req.files.image2[0].filename}` : null;
+    const image_url3 = req.files?.image3?.[0] ? `/uploads/${req.files.image3[0].filename}` : null;
+    const image_url4 = req.files?.image4?.[0] ? `/uploads/${req.files.image4[0].filename}` : null;
+    const room = await Room.create({ room_number, rtype_id: room_type_id, floor, status, image_url, image_url2, image_url3, image_url4 });
     const full = await Room.findByPk(room.r_id, { include: [{ model: RoomType, as: 'roomType' }] });
     res.status(201).json(full);
   } catch (err) {
@@ -96,8 +99,11 @@ const updateRoom = async (req, res) => {
     const room = await Room.findByPk(req.params.id);
     if (!room) return res.status(404).json({ message: 'ບໍ່ພົບຫ້ອງນີ້' });
     const { room_number, room_type_id, floor, status } = req.body;
-    const image_url = req.file ? `/uploads/${req.file.filename}` : room.image_url;
-    await room.update({ room_number, rtype_id: room_type_id, floor, status, image_url });
+    const image_url  = req.files?.image?.[0]  ? `/uploads/${req.files.image[0].filename}`  : room.image_url;
+    const image_url2 = req.files?.image2?.[0] ? `/uploads/${req.files.image2[0].filename}` : room.image_url2;
+    const image_url3 = req.files?.image3?.[0] ? `/uploads/${req.files.image3[0].filename}` : room.image_url3;
+    const image_url4 = req.files?.image4?.[0] ? `/uploads/${req.files.image4[0].filename}` : room.image_url4;
+    await room.update({ room_number, rtype_id: room_type_id, floor, status, image_url, image_url2, image_url3, image_url4 });
     const full = await Room.findByPk(room.r_id, { include: [{ model: RoomType, as: 'roomType' }] });
     res.json(full);
   } catch (err) {

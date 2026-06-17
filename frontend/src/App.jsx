@@ -6,6 +6,7 @@ import HomePage from './pages/HomePage';
 import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
 import RoomsPage from './pages/RoomsPage';
+import RoomDetailPage from './pages/RoomDetailPage';
 import BookingPage from './pages/BookingPage';
 import MyBookingsPage from './pages/MyBookingsPage';
 import StaffDashboardPage from './pages/StaffDashboardPage';
@@ -34,6 +35,7 @@ export default function App() {
             <Route path="/login" element={<LoginPage />} />
             <Route path="/register" element={<RegisterPage />} />
             <Route path="/rooms" element={<RoomsPage />} />
+            <Route path="/rooms/:id" element={<RoomDetailPage />} />
 
             {/* Member only */}
             <Route path="/booking" element={

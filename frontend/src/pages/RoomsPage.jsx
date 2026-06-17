@@ -26,47 +26,22 @@ function RoomCard({ room, onBook }) {
         <span className="text-[#7B2438] text-xl">📅</span>
       </div>
 
-      {/* Info Row */}
-      <div className="flex gap-4 px-5 pb-3 text-sm text-[#7B2438] font-medium flex-wrap">
-        <span>🏠 <strong>SIZE {room.room_number}</strong></span>
-        <span>👤 ບັບຈຸໄດ້ {room.roomType?.capacity} ທ່ານ</span>
-        <span>💲 ฿{Number(room.roomType?.price_per_hour).toLocaleString()}/ຊົ່ວໂມງ</span>
-        <span>🏢 ຊັ້ນ {room.floor}</span>
+      {/* Photo — 1 ช่อง */}
+      <div className="px-5 pb-3">
+        <div className="bg-gray-300 h-40 rounded-xl flex items-center justify-center overflow-hidden">
+          {room.image_url ? (
+            <img
+              src={room.image_url}
+              alt={`ຫ້ອງ ${room.room_number}`}
+              className="w-full h-full object-cover"
+            />
+          ) : (
+            <span className="text-gray-400 text-xs text-center px-2">
+              [ ຮູບຫ້ອງ {room.room_number} ]
+            </span>
+          )}
+        </div>
       </div>
-
-      {/* Photos — 2 ช่อง */}
-      <div className="grid grid-cols-2 gap-2 px-5 pb-3">
-        {[0, 1].map((i) => (
-          <div
-            key={i}
-            className="bg-gray-300 h-36 rounded-xl flex items-center justify-center overflow-hidden"
-          >
-            {room.image_url && i === 0 ? (
-              <img
-                src={room.image_url}
-                alt={`ຫ້ອງ ${room.room_number}`}
-                className="w-full h-full object-cover"
-              />
-            ) : (
-              /*
-                TODO: ใส่รูปห้อง {room.room_number} รูปที่ {i + 1}
-                วิธี: เพิ่ม image_url ในข้อมูลห้องผ่าน Admin Panel
-                หรือวาง path รูปใน image_url ของ room
-              */
-              <span className="text-gray-400 text-xs text-center px-2 leading-5">
-                [ ຮູບຫ້ອງ {room.room_number} ]
-              </span>
-            )}
-          </div>
-        ))}
-      </div>
-
-      {/* Amenities */}
-      {room.roomType?.amenities && (
-        <p className="text-xs text-rose-500 px-5 pb-2 truncate">
-          ✨ {room.roomType.amenities}
-        </p>
-      )}
 
       {/* Footer */}
       <div className="px-5 pb-4 flex items-center justify-between">
@@ -129,13 +104,7 @@ export default function RoomsPage() {
   };
 
   const handleBook = (room) => {
-    const params = new URLSearchParams({ room_id: room.r_id });
-    if (filtered && date && startTime && endTime) {
-      params.append('date', date);
-      params.append('start_time', startTime);
-      params.append('end_time', endTime);
-    }
-    navigate(`/booking?${params.toString()}`);
+    navigate(`/rooms/${room.r_id}`);
   };
 
   const availCount = rooms.filter((r) => r.isAvailable).length;
