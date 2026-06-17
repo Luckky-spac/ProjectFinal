@@ -14,17 +14,17 @@ const authenticate = (req, res, next) => {
   }
 };
 
-// เฉพาะลูกค้า (users table)
+// เฉพาะลูกค้า (role = member)
 const isUser = (req, res, next) => {
-  if (req.user?.type !== 'user') {
+  if (req.user?.role !== 'member') {
     return res.status(403).json({ message: 'เฉพาะลูกค้าเท่านั้น' });
   }
   next();
 };
 
-// เฉพาะพนักงาน/เจ้าของ (employees table)
+// เฉพาะพนักงาน/เจ้าของ (role = admin หรือ staff)
 const isEmployee = (req, res, next) => {
-  if (req.user?.type !== 'employee') {
+  if (!['admin', 'staff'].includes(req.user?.role)) {
     return res.status(403).json({ message: 'เฉพาะพนักงานเท่านั้น' });
   }
   next();

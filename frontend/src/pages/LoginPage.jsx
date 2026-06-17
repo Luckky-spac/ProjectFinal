@@ -21,7 +21,7 @@ export default function LoginPage() {
     try {
       const { data } = await api.post('/auth/login', form);
       login(data.user, data.token);
-      navigate(data.user.type === 'employee' ? '/staff' : '/');
+      navigate(data.user.role !== 'member' ? '/staff' : '/');
     } catch (err) {
       setError(err.response?.data?.message || 'ເກີດຂໍ້ຜິດພາດ');
     } finally {

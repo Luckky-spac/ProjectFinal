@@ -4,7 +4,7 @@ import api from '../api/axios';
 
 export default function RegisterPage() {
   const navigate = useNavigate();
-  const [form, setForm] = useState({ name: '', email: '', password: '', confirm: '', phone: '', gender: '', birthday: '' });
+  const [form, setForm] = useState({ fname: '', lname: '', email: '', password: '', confirm: '', phone: '', gender: '', birthday: '' });
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
@@ -19,7 +19,8 @@ export default function RegisterPage() {
     setLoading(true);
     try {
       await api.post('/auth/register', {
-        name: form.name,
+        fname: form.fname,
+        lname: form.lname || undefined,
         email: form.email,
         password: form.password,
         phone: form.phone,
@@ -53,10 +54,17 @@ export default function RegisterPage() {
         )}
 
         <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">👤 ຊື່ ແລະ ນາມສະກຸນ</label>
-            <input type="text" name="name" value={form.name} onChange={handleChange} required
-              className={inputCls} placeholder="ກວດສອບຊື່-ນາມສະກຸນ" />
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">👤 ຊື່</label>
+              <input type="text" name="fname" value={form.fname} onChange={handleChange} required
+                className={inputCls} placeholder="ຊື່" />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">👤 ນາມສະກຸນ</label>
+              <input type="text" name="lname" value={form.lname} onChange={handleChange}
+                className={inputCls} placeholder="ນາມສະກຸນ" />
+            </div>
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">📧 ອີເມລ</label>

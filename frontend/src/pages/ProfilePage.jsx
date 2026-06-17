@@ -3,9 +3,10 @@ import api from '../api/axios';
 import { useAuth } from '../context/AuthContext';
 
 export default function ProfilePage() {
-  const { user, refreshUser } = useAuth();
+  const { user, refreshUser, isEmployee } = useAuth();
   const [form, setForm] = useState({
-    name: '', phone: '', gender: '', birthday: '', address: '',
+    fname: '', lname: '', name: '',
+    phone: '', gender: '', birthday: '', address: '',
     password: '', new_password: '', confirm_password: '',
   });
   const [loading, setLoading] = useState(false);
@@ -17,6 +18,8 @@ export default function ProfilePage() {
     api.get('/auth/me').then(({ data }) => {
       setForm((f) => ({
         ...f,
+        fname: data.fname || '',
+        lname: data.lname || '',
         name: data.name || '',
         phone: data.phone || '',
         gender: data.gender || '',
@@ -40,13 +43,22 @@ export default function ProfilePage() {
 
     setLoading(true);
     try {
-      const payload = {
-        name: form.name,
-        phone: form.phone,
-        gender: form.gender || undefined,
-        birthday: form.birthday || undefined,
-        address: form.address || undefined,
-      };
+      const payload = isEmployee
+        ? {
+            name: form.name,
+            phone: form.phone,
+            gender: form.gender || undefined,
+            birthday: form.birthday || undefined,
+          }
+        : {
+            fname: form.fname,
+            lname: form.lname || undefined,
+            phone: form.phone,
+            gender: form.gender || undefined,
+            birthday: form.birthday || undefined,
+            address: form.address || undefined,
+          };
+
       if (form.new_password) {
         payload.password = form.password;
         payload.new_password = form.new_password;
@@ -79,22 +91,35 @@ export default function ProfilePage() {
 
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">
 
-          {/* ข้อมูลบัญชี */}
           <div>
             <label className="text-sm text-gray-600 mb-1 block">ອີເມລ</label>
             <input value={user?.email || ''} disabled
               className="w-full border rounded-xl px-4 py-2.5 text-sm bg-gray-50 text-gray-400 cursor-not-allowed" />
           </div>
-          <div>
-            <label className="text-sm text-gray-600 mb-1 block">ຊື່ ແລະ ນາມສະກຸນ</label>
-            <input name="name" value={form.name} onChange={handleChange} required className={inputCls} />
-          </div>
+
+          {isEmployee ? (
+            <div>
+              <label className="text-sm text-gray-600 mb-1 block">ຊື່</label>
+              <input name="name" value={form.name} onChange={handleChange} required className={inputCls} />
+            </div>
+          ) : (
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="text-sm text-gray-600 mb-1 block">ຊື່</label>
+                <input name="fname" value={form.fname} onChange={handleChange} required className={inputCls} placeholder="ຊື່" />
+              </div>
+              <div>
+                <label className="text-sm text-gray-600 mb-1 block">ນາມສະກຸນ</label>
+                <input name="lname" value={form.lname} onChange={handleChange} className={inputCls} placeholder="ນາມສະກຸນ" />
+              </div>
+            </div>
+          )}
+
           <div>
             <label className="text-sm text-gray-600 mb-1 block">ເບີໂທ</label>
             <input name="phone" value={form.phone} onChange={handleChange} required className={inputCls} placeholder="020-xxx-xxxx" />
           </div>
 
-          {/* ข้อมูลเพิ่มเติม */}
           <div>
             <label className="text-sm text-gray-600 mb-1 block">ເພດ</label>
             <select name="gender" value={form.gender} onChange={handleChange} className={inputCls}>
@@ -108,13 +133,15 @@ export default function ProfilePage() {
             <label className="text-sm text-gray-600 mb-1 block">ວັນເດືອນປີເກີດ</label>
             <input name="birthday" type="date" value={form.birthday} onChange={handleChange} className={inputCls} />
           </div>
-          <div>
-            <label className="text-sm text-gray-600 mb-1 block">ທີ່ຢູ່</label>
-            <textarea name="address" value={form.address} onChange={handleChange} rows={2}
-              className={inputCls} placeholder="ບ້ານ, ເມືອງ, ແຂວງ..." />
-          </div>
 
-          {/* เปลี่ยนรหัสผ่าน */}
+          {!isEmployee && (
+            <div>
+              <label className="text-sm text-gray-600 mb-1 block">ທີ່ຢູ່</label>
+              <textarea name="address" value={form.address} onChange={handleChange} rows={2}
+                className={inputCls} placeholder="ບ້ານ, ເມືອງ, ແຂວງ..." />
+            </div>
+          )}
+
           <hr className="my-1" />
           <p className="text-sm text-gray-400">ປ່ຽນລະຫັດຜ່ານ (ບໍ່ບັງຄັບ)</p>
           <div>

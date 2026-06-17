@@ -1,5 +1,5 @@
-const { Op, fn, col, literal } = require('sequelize');
-const { sequelize, Booking, Payment, Room, RoomType, User, Customer } = require('../models');
+const { Op } = require('sequelize');
+const { Booking, Payment, Room, RoomType, User, Customer } = require('../models');
 
 // GET /api/reports/bookings?date=YYYY-MM-DD
 const bookingsReport = async (req, res) => {
@@ -15,7 +15,7 @@ const bookingsReport = async (req, res) => {
       where,
       include: [
         { model: Room, as: 'room', include: [{ model: RoomType, as: 'roomType' }] },
-        { model: User, as: 'user', attributes: ['id', 'email'], include: [{ model: Customer, as: 'customer', attributes: ['name', 'phone'] }] },
+        { model: User, as: 'user', attributes: ['u_id', 'email'], include: [{ model: Customer, as: 'customer', attributes: ['fname', 'lname', 'phone'] }] },
         { model: Payment, as: 'payments' },
       ],
       order: [['createdAt', 'DESC']],
@@ -77,34 +77,33 @@ const roomsReport = async (req, res) => {
       order: [['room_number', 'ASC']],
     });
 
-    // ดึง bookings+payments ทั้งหมดครั้งเดียวเพื่อหลีกเลี่ยง N+1
     const allBookings = await Booking.findAll({
-      attributes: ['id', 'room_id', 'status'],
+      attributes: ['b_id', 'r_id', 'status'],
       where: { status: { [Op.notIn]: ['cancelled'] } },
     });
     const allPayments = await Payment.findAll({
-      attributes: ['id', 'booking_id', 'amount', 'status'],
+      attributes: ['pay_id', 'b_id', 'amount', 'status'],
       where: { status: 'confirmed' },
     });
 
     const bookingsByRoom = {};
     allBookings.forEach((b) => {
-      if (!bookingsByRoom[b.room_id]) bookingsByRoom[b.room_id] = [];
-      bookingsByRoom[b.room_id].push(b);
+      if (!bookingsByRoom[b.r_id]) bookingsByRoom[b.r_id] = [];
+      bookingsByRoom[b.r_id].push(b);
     });
 
     const paymentsByBooking = {};
     allPayments.forEach((p) => {
-      if (!paymentsByBooking[p.booking_id]) paymentsByBooking[p.booking_id] = [];
-      paymentsByBooking[p.booking_id].push(p);
+      if (!paymentsByBooking[p.b_id]) paymentsByBooking[p.b_id] = [];
+      paymentsByBooking[p.b_id].push(p);
     });
 
     const stats = rooms.map((room) => {
-      const roomBookings = bookingsByRoom[room.id] || [];
+      const roomBookings = bookingsByRoom[room.r_id] || [];
       const total_bookings = roomBookings.length;
       const completed_bookings = roomBookings.filter((b) => b.status === 'completed').length;
       const revenue = roomBookings.reduce((sum, b) => {
-        const pmts = paymentsByBooking[b.id] || [];
+        const pmts = paymentsByBooking[b.b_id] || [];
         return sum + pmts.reduce((s, p) => s + parseFloat(p.amount || 0), 0);
       }, 0);
       return {
@@ -127,43 +126,44 @@ const customersReport = async (req, res) => {
   try {
     const users = await User.findAll({
       attributes: { exclude: ['password'] },
-      include: [{ model: Customer, as: 'customer', attributes: ['name', 'phone'] }],
+      include: [{ model: Customer, as: 'customer', attributes: ['fname', 'lname', 'phone'] }],
       order: [['createdAt', 'DESC']],
     });
 
     const allBookings = await Booking.findAll({
-      attributes: ['id', 'user_id', 'status'],
+      attributes: ['b_id', 'u_id', 'status'],
     });
 
     const allPayments = await Payment.findAll({
-      attributes: ['id', 'booking_id', 'amount', 'status'],
+      attributes: ['pay_id', 'b_id', 'amount', 'status'],
       where: { status: 'confirmed' },
     });
 
     const bookingsByUser = {};
     allBookings.forEach((b) => {
-      if (!bookingsByUser[b.user_id]) bookingsByUser[b.user_id] = [];
-      bookingsByUser[b.user_id].push(b);
+      if (!bookingsByUser[b.u_id]) bookingsByUser[b.u_id] = [];
+      bookingsByUser[b.u_id].push(b);
     });
 
     const paymentsByBooking = {};
     allPayments.forEach((p) => {
-      if (!paymentsByBooking[p.booking_id]) paymentsByBooking[p.booking_id] = [];
-      paymentsByBooking[p.booking_id].push(p);
+      if (!paymentsByBooking[p.b_id]) paymentsByBooking[p.b_id] = [];
+      paymentsByBooking[p.b_id].push(p);
     });
 
     const stats = users.map((user) => {
       const { customer, ...userJson } = user.toJSON();
-      const userBookings = bookingsByUser[user.id] || [];
+      const userBookings = bookingsByUser[user.u_id] || [];
       const total_bookings = userBookings.length;
       const completed_bookings = userBookings.filter((b) => b.status === 'completed').length;
       const total_spent = userBookings.reduce((sum, b) => {
-        const pmts = paymentsByBooking[b.id] || [];
+        const pmts = paymentsByBooking[b.b_id] || [];
         return sum + pmts.reduce((s, p) => s + parseFloat(p.amount || 0), 0);
       }, 0);
       return {
         ...userJson,
-        name: customer?.name,
+        fname: customer?.fname,
+        lname: customer?.lname,
         phone: customer?.phone,
         total_bookings,
         completed_bookings,

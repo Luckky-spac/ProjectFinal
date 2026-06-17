@@ -129,7 +129,7 @@ export default function RoomsPage() {
   };
 
   const handleBook = (room) => {
-    const params = new URLSearchParams({ room_id: room.id });
+    const params = new URLSearchParams({ room_id: room.r_id });
     if (filtered && date && startTime && endTime) {
       params.append('date', date);
       params.append('start_time', startTime);
@@ -207,7 +207,7 @@ export default function RoomsPage() {
         ) : (
           <div className="flex flex-col gap-5">
             {rooms.map((room) => (
-              <RoomCard key={room.id} room={room} onBook={handleBook} />
+              <RoomCard key={room.r_id} room={room} onBook={handleBook} />
             ))}
           </div>
         )}

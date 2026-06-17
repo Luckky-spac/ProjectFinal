@@ -28,7 +28,7 @@ export function AuthProvider({ children }) {
   const refreshUser = async () => {
     try {
       const { data } = await api.get('/auth/me');
-      const updated = { ...data, type: data.type };
+      const updated = { ...data };
       localStorage.setItem('user', JSON.stringify(updated));
       setUser(updated);
     } catch {
@@ -38,9 +38,9 @@ export function AuthProvider({ children }) {
   };
 
   // helper flags
-  const isEmployee = user?.type === 'employee';
+  const isEmployee = user?.role === 'admin' || user?.role === 'staff';
   const isAdmin = user?.role === 'admin';
-  const isStaff = user?.role === 'staff' || user?.role === 'admin';
+  const isStaff = user?.role === 'admin' || user?.role === 'staff';
 
   return (
     <AuthContext.Provider value={{ user, login, logout, refreshUser, loading, isEmployee, isAdmin, isStaff }}>

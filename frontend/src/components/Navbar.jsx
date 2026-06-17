@@ -4,6 +4,7 @@ import { useAuth } from '../context/AuthContext';
 export default function Navbar() {
   const { user, logout, isEmployee, isAdmin } = useAuth();
   const navigate = useNavigate();
+  const displayName = user?.name || (user?.fname ? `${user.fname} ${user.lname || ''}`.trim() : null);
 
   const handleLogout = () => {
     logout();
@@ -38,9 +39,9 @@ export default function Navbar() {
 
               <Link to="/profile" className="flex items-center gap-2 text-white hover:text-rose-200 transition">
                 <span className="w-7 h-7 rounded-full bg-rose-700 border-2 border-rose-400 flex items-center justify-center text-xs font-bold">
-                  {user.name?.[0]?.toUpperCase() || '?'}
+                  {displayName?.[0]?.toUpperCase() || '?'}
                 </span>
-                <span className="hidden sm:inline text-rose-100 text-xs">{user.name}</span>
+                <span className="hidden sm:inline text-rose-100 text-xs">{displayName}</span>
                 {isEmployee && (
                   <span className="text-xs bg-rose-800 border border-rose-600 px-1.5 py-0.5 rounded-full text-rose-200">
                     {user.role === 'admin' ? 'Admin' : 'Staff'}

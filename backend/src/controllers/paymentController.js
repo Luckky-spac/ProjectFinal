@@ -1,40 +1,39 @@
-const { Payment, Booking, Room, RoomType, User } = require('../models');
-// Room ใช้สำหรับ update status เมื่อ payment confirmed
+const { Payment, Booking, Room, RoomType, User, Customer } = require('../models');
 
 const bookingIncludes = [
   { model: Room, as: 'room', include: [{ model: RoomType, as: 'roomType' }] },
-  { model: User, as: 'user', attributes: ['id', 'name', 'email', 'phone'] },
+  { model: User, as: 'user', attributes: ['u_id', 'email'], include: [{ model: Customer, as: 'customer', attributes: ['fname', 'lname', 'phone'] }] },
   { model: Payment, as: 'payments' },
 ];
 
-// POST /api/payments  (ลูกค้าอัปโหลด slip ชำระส่วนที่เหลือ)
+// POST /api/payments  (ລູກຄ້າ upload slip ຊຳລະສ່ວນທີ່ເຫຼືອ)
 const createPayment = async (req, res) => {
   try {
     const { booking_id, amount, method } = req.body;
 
     if (!booking_id || !amount) {
-      return res.status(400).json({ message: 'กรุณากรอกข้อมูลให้ครบ' });
+      return res.status(400).json({ message: 'ກະລຸນາກອກຂໍ້ມູນໃຫ້ຄົບ' });
     }
 
     const booking = await Booking.findByPk(booking_id);
-    if (!booking) return res.status(404).json({ message: 'ไม่พบการจองนี้' });
-    if (booking.user_id !== req.user.id) {
-      return res.status(403).json({ message: 'ไม่มีสิทธิ์เข้าถึงข้อมูลนี้' });
+    if (!booking) return res.status(404).json({ message: 'ບໍ່ພົບການຈອງນີ້' });
+    if (booking.u_id !== req.user.id) {
+      return res.status(403).json({ message: 'ບໍ່ມີສິດເຂົ້າເຖິງຂໍ້ມູນນີ້' });
     }
     if (booking.status !== 'checked_in') {
-      return res.status(400).json({ message: 'สามารถชำระเงินได้เฉพาะเมื่อเช็คอินแล้ว' });
+      return res.status(400).json({ message: 'ສາມາດຊຳລະເງິນໄດ້ສະເພາະເມື່ອ check-in ແລ້ວ' });
     }
 
     const existing = await Payment.findOne({
-      where: { booking_id, type: 'final', status: ['pending', 'confirmed'] },
+      where: { b_id: booking_id, type: 'final', status: ['pending', 'confirmed'] },
     });
     if (existing) {
-      return res.status(400).json({ message: 'มีรายการชำระเงินอยู่แล้ว กรุณารอพนักงานยืนยัน' });
+      return res.status(400).json({ message: 'ມີລາຍການຊຳລະເງິນຢູ່ແລ້ວ ກະລຸນາລໍຖ້າພະນັກງານຢືນຢັນ' });
     }
-    if (!req.file) return res.status(400).json({ message: 'กรุณาเลือกไฟล์ slip' });
+    if (!req.file) return res.status(400).json({ message: 'ກະລຸນາເລືອກໄຟລ slip' });
 
     const payment = await Payment.create({
-      booking_id,
+      b_id: booking_id,
       amount: parseFloat(amount),
       type: 'final',
       method: method || 'transfer',
@@ -48,13 +47,13 @@ const createPayment = async (req, res) => {
   }
 };
 
-// PATCH /api/payments/:id/confirm  (พนักงานยืนยันการชำระ)
+// PATCH /api/payments/:id/confirm  (ພະນັກງານຢືນຢັນການຊຳລະ)
 const confirmPayment = async (req, res) => {
   try {
     const payment = await Payment.findByPk(req.params.id);
-    if (!payment) return res.status(404).json({ message: 'ไม่พบรายการชำระเงิน' });
+    if (!payment) return res.status(404).json({ message: 'ບໍ່ພົບລາຍການຊຳລະເງິນ' });
     if (payment.status !== 'pending') {
-      return res.status(400).json({ message: 'รายการนี้ถูกดำเนินการแล้ว' });
+      return res.status(400).json({ message: 'ລາຍການນີ້ຖືກດຳເນີນການແລ້ວ' });
     }
 
     await payment.update({
@@ -63,27 +62,26 @@ const confirmPayment = async (req, res) => {
       confirmed_at: new Date(),
     });
 
-    // ถ้า booking ยังอยู่ใน checked_in หรือ checking_out ให้ complete เลย
-    const booking = await Booking.findByPk(payment.booking_id);
+    const booking = await Booking.findByPk(payment.b_id);
     if (['checked_in', 'checking_out'].includes(booking.status)) {
       await booking.update({ status: 'completed', actual_check_out: new Date() });
-      await Room.update({ status: 'available' }, { where: { id: booking.room_id } });
+      await Room.update({ status: 'available' }, { where: { r_id: booking.r_id } });
     }
 
-    const full = await Booking.findByPk(payment.booking_id, { include: bookingIncludes });
+    const full = await Booking.findByPk(payment.b_id, { include: bookingIncludes });
     res.json({ payment, booking: full });
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
 };
 
-// PATCH /api/payments/:id/reject  (พนักงานปฏิเสธ)
+// PATCH /api/payments/:id/reject  (ພະນັກງານປະຕິເສດ)
 const rejectPayment = async (req, res) => {
   try {
     const payment = await Payment.findByPk(req.params.id);
-    if (!payment) return res.status(404).json({ message: 'ไม่พบรายการชำระเงิน' });
+    if (!payment) return res.status(404).json({ message: 'ບໍ່ພົບລາຍການຊຳລະເງິນ' });
     if (payment.status !== 'pending') {
-      return res.status(400).json({ message: 'รายการนี้ถูกดำเนินการแล้ว' });
+      return res.status(400).json({ message: 'ລາຍການນີ້ຖືກດຳເນີນການແລ້ວ' });
     }
     await payment.update({ status: 'rejected' });
     res.json(payment);
@@ -96,12 +94,12 @@ const rejectPayment = async (req, res) => {
 const getPaymentsByBooking = async (req, res) => {
   try {
     const booking = await Booking.findByPk(req.params.booking_id);
-    if (!booking) return res.status(404).json({ message: 'ไม่พบการจองนี้' });
-    if (req.user.type === 'user' && booking.user_id !== req.user.id) {
-      return res.status(403).json({ message: 'ไม่มีสิทธิ์เข้าถึงข้อมูลนี้' });
+    if (!booking) return res.status(404).json({ message: 'ບໍ່ພົບການຈອງນີ້' });
+    if (req.user.role === 'member' && booking.u_id !== req.user.id) {
+      return res.status(403).json({ message: 'ບໍ່ມີສິດເຂົ້າເຖິງຂໍ້ມູນນີ້' });
     }
     const payments = await Payment.findAll({
-      where: { booking_id: req.params.booking_id },
+      where: { b_id: req.params.booking_id },
       order: [['createdAt', 'ASC']],
     });
     res.json(payments);

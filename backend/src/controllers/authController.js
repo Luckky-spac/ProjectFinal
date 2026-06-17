@@ -5,12 +5,12 @@ const { User, Customer, Employee } = require('../models');
 const signToken = (payload) =>
   jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: process.env.JWT_EXPIRES_IN });
 
-// POST /auth/register  [ขั้น 6]
+// POST /auth/register  (ເຊີນສະໝັກລູກຄ້າເທົ່ານັ້ນ)
 const register = async (req, res) => {
   try {
-    const { name, email, password, phone, gender, birthday } = req.body;
-    if (!name || !email || !password || !phone) {
-      return res.status(400).json({ message: 'name, email, password ແລະ phone ຈຳເປັນຕ້ອງກອກ' });
+    const { fname, lname, email, password, phone, gender, birthday } = req.body;
+    if (!fname || !email || !password || !phone) {
+      return res.status(400).json({ message: 'fname, email, password ແລະ phone ຈຳເປັນຕ້ອງກອກ' });
     }
     if (phone.replace(/\D/g, '').length < 10) {
       return res.status(400).json({ message: 'ເບີໂທຕ້ອງມີຢ່າງໜ້ອຍ 10 ຕົວເລກ (ຕົວຢ່າງ: 02012345678)' });
@@ -21,24 +21,25 @@ const register = async (req, res) => {
     const hashed = await bcrypt.hash(password, 10);
     const user = await User.create({ email, password: hashed, role: 'member' });
     const customer = await Customer.create({
-      user_id: user.id,
-      name,
+      u_id: user.u_id,
+      fname,
+      lname: lname || '',
       phone,
       gender: gender || null,
       birthday: birthday || null,
     });
 
-    const token = signToken({ id: user.id, role: user.role, type: 'user' });
+    const token = signToken({ id: user.u_id, role: user.role });
     return res.status(201).json({
       token,
-      user: { id: user.id, name: customer.name, email: user.email, role: user.role, type: 'user' },
+      user: { id: user.u_id, fname: customer.fname, lname: customer.lname, email: user.email, role: user.role },
     });
   } catch (err) {
     return res.status(500).json({ message: err.message });
   }
 };
 
-// POST /auth/login  [ขั้น 8]
+// POST /auth/login  (login ດຽວ ໃຊ້ຮ່ວມກັນທຸກ role)
 const login = async (req, res) => {
   try {
     const { email, password } = req.body;
@@ -46,113 +47,157 @@ const login = async (req, res) => {
       return res.status(400).json({ message: 'email ແລະ password ຈຳເປັນຕ້ອງກອກ' });
     }
 
-    // ตรวจ employees ก่อน
-    const emp = await Employee.findOne({ where: { email } });
-    if (emp) {
-      if (!(await bcrypt.compare(password, emp.password))) {
-        return res.status(401).json({ message: 'ອີເມລຫຼືລະຫັດຜ່ານບໍ່ຖືກຕ້ອງ' });
-      }
-      if (emp.status !== 'active') {
-        return res.status(403).json({ message: 'ບັນຊີນີ້ຖືກລະງັບການໃຊ້ງານ' });
-      }
-      const token = signToken({ id: emp.id, role: emp.role, type: 'employee' });
-      return res.json({
-        token,
-        user: { id: emp.id, name: emp.name, email: emp.email, role: emp.role, type: 'employee' },
-      });
-    }
-
-    // ตรวจ users + JOIN customer เพื่อดึง name  [ขั้น 9]
     const user = await User.findOne({
       where: { email },
-      include: [{ model: Customer, as: 'customer' }],
+      include: [
+        { model: Customer, as: 'customer' },
+        { model: Employee, as: 'employee' },
+      ],
     });
+
     if (!user || !(await bcrypt.compare(password, user.password))) {
       return res.status(401).json({ message: 'ອີເມລຫຼືລະຫັດຜ່ານບໍ່ຖືກຕ້ອງ' });
     }
-    const token = signToken({ id: user.id, role: user.role, type: 'user' });
+
+    if (['admin', 'staff'].includes(user.role)) {
+      const emp = user.employee;
+      if (!emp || emp.status !== 'active') {
+        return res.status(403).json({ message: 'ບັນຊີນີ້ຖືກລະງັບການໃຊ້ງານ' });
+      }
+      const token = signToken({ id: user.u_id, role: user.role, employeeId: emp.emp_id });
+      return res.json({
+        token,
+        user: { id: user.u_id, name: emp.name, email: user.email, role: user.role, employeeId: emp.emp_id },
+      });
+    }
+
+    // member
+    const token = signToken({ id: user.u_id, role: user.role });
     return res.json({
       token,
-      user: { id: user.id, name: user.customer?.name, email: user.email, role: user.role, type: 'user' },
+      user: {
+        id: user.u_id,
+        fname: user.customer?.fname,
+        lname: user.customer?.lname,
+        email: user.email,
+        role: user.role,
+      },
     });
   } catch (err) {
     return res.status(500).json({ message: err.message });
   }
 };
 
-// POST /auth/employee/login  [ขั้น 10 — ไม่ต้องแก้]
+// POST /auth/employee/login  (backward compat — ກວດ role ດ້ວຍ)
 const employeeLogin = async (req, res) => {
   try {
     const { email, password } = req.body;
     if (!email || !password) {
       return res.status(400).json({ message: 'email ແລະ password ຈຳເປັນຕ້ອງກອກ' });
     }
-    const emp = await Employee.findOne({ where: { email } });
-    if (!emp || !(await bcrypt.compare(password, emp.password))) {
+
+    const user = await User.findOne({
+      where: { email },
+      include: [{ model: Employee, as: 'employee' }],
+    });
+
+    if (!user || !(await bcrypt.compare(password, user.password))) {
       return res.status(401).json({ message: 'ອີເມລຫຼືລະຫັດຜ່ານບໍ່ຖືກຕ້ອງ' });
     }
-    if (emp.status !== 'active') {
+    if (!['admin', 'staff'].includes(user.role)) {
+      return res.status(403).json({ message: 'ບໍ່ມີສິດເຂົ້າໜ້ານີ້' });
+    }
+    const emp = user.employee;
+    if (!emp || emp.status !== 'active') {
       return res.status(403).json({ message: 'ບັນຊີນີ້ຖືກລະງັບການໃຊ້ງານ' });
     }
-    const token = signToken({ id: emp.id, role: emp.role, type: 'employee' });
+
+    const token = signToken({ id: user.u_id, role: user.role, employeeId: emp.emp_id });
     return res.json({
       token,
-      user: { id: emp.id, name: emp.name, email: emp.email, role: emp.role, type: 'employee' },
+      user: { id: user.u_id, name: emp.name, email: user.email, role: user.role, employeeId: emp.emp_id },
     });
   } catch (err) {
     return res.status(500).json({ message: err.message });
   }
 };
 
-// GET /auth/me  [ขั้น 11]
+// GET /auth/me
 const me = async (req, res) => {
   try {
-    if (req.user.type === 'employee') {
-      const emp = await Employee.findByPk(req.user.id, {
-        attributes: ['id', 'name', 'email', 'role', 'phone', 'position', 'gender', 'birthday'],
+    if (['admin', 'staff'].includes(req.user.role)) {
+      const emp = await Employee.findByPk(req.user.employeeId, {
+        attributes: ['emp_id', 'name', 'phone', 'position', 'gender', 'birthday', 'status', 'hire_date'],
+        include: [{ model: User, as: 'user', attributes: ['u_id', 'email', 'role'] }],
       });
       if (!emp) return res.status(404).json({ message: 'ບໍ່ພົບບັນຊີນີ້' });
-      return res.json({ ...emp.toJSON(), type: 'employee' });
+      return res.json({
+        id: emp.user.u_id,
+        employeeId: emp.emp_id,
+        email: emp.user.email,
+        role: emp.user.role,
+        name: emp.name,
+        phone: emp.phone,
+        position: emp.position,
+        gender: emp.gender,
+        birthday: emp.birthday,
+        status: emp.status,
+        hire_date: emp.hire_date,
+      });
     }
 
     const user = await User.findByPk(req.user.id, {
-      attributes: ['id', 'email', 'role'],
+      attributes: ['u_id', 'email', 'role'],
       include: [{
         model: Customer,
         as: 'customer',
-        attributes: ['name', 'phone', 'gender', 'birthday', 'address', 'avatar_url'],
+        attributes: ['fname', 'lname', 'phone', 'gender', 'birthday', 'address'],
       }],
     });
     if (!user) return res.status(404).json({ message: 'ບໍ່ພົບບັນຊີນີ້' });
 
     const { customer, ...userJson } = user.toJSON();
-    return res.json({ ...userJson, ...(customer || {}), type: 'user' });
+    return res.json({ ...userJson, ...(customer || {}) });
   } catch (err) {
     return res.status(500).json({ message: err.message });
   }
 };
 
-// PUT /auth/profile  [ขั้น 12]
+// PUT /auth/profile
 const updateProfile = async (req, res) => {
   try {
-    const { name, phone, gender, birthday, address, password, new_password } = req.body;
+    const { fname, lname, name, phone, gender, birthday, address, password, new_password } = req.body;
 
-    if (req.user.type === 'employee') {
-      const emp = await Employee.findByPk(req.user.id);
+    if (['admin', 'staff'].includes(req.user.role)) {
+      const emp = await Employee.findByPk(req.user.employeeId);
       if (!emp) return res.status(404).json({ message: 'ບໍ່ພົບບັນຊີນີ້' });
-      const updates = {};
-      if (name !== undefined) updates.name = name || emp.name;
-      if (phone !== undefined) updates.phone = phone;
-      if (gender !== undefined) updates.gender = gender || null;
-      if (birthday !== undefined) updates.birthday = birthday || null;
+      const user = await User.findByPk(req.user.id);
+
+      const empUpdates = {};
+      const newName = fname || name;
+      if (newName !== undefined) empUpdates.name = newName || emp.name;
+      if (phone !== undefined) empUpdates.phone = phone;
+      if (gender !== undefined) empUpdates.gender = gender || null;
+      if (birthday !== undefined) empUpdates.birthday = birthday || null;
+      if (Object.keys(empUpdates).length > 0) await emp.update(empUpdates);
+
       if (password && new_password) {
-        if (!(await bcrypt.compare(password, emp.password))) {
+        if (!(await bcrypt.compare(password, user.password))) {
           return res.status(400).json({ message: 'ລະຫັດຜ່ານເດີມບໍ່ຖືກຕ້ອງ' });
         }
-        updates.password = await bcrypt.hash(new_password, 10);
+        await user.update({ password: await bcrypt.hash(new_password, 10) });
       }
-      await emp.update(updates);
-      return res.json({ id: emp.id, name: emp.name, email: emp.email, phone: emp.phone, gender: emp.gender, birthday: emp.birthday, role: emp.role, type: 'employee' });
+
+      return res.json({
+        id: user.u_id,
+        employeeId: emp.emp_id,
+        email: user.email,
+        role: user.role,
+        name: emp.name,
+        phone: emp.phone,
+        gender: emp.gender,
+        birthday: emp.birthday,
+      });
     }
 
     const user = await User.findByPk(req.user.id);
@@ -165,10 +210,11 @@ const updateProfile = async (req, res) => {
       await user.update({ password: await bcrypt.hash(new_password, 10) });
     }
 
-    const customer = await Customer.findOne({ where: { user_id: user.id } });
+    const customer = await Customer.findOne({ where: { u_id: user.u_id } });
     if (customer) {
       await customer.update({
-        name: name !== undefined ? name : customer.name,
+        fname: fname !== undefined ? fname : customer.fname,
+        lname: lname !== undefined ? lname : customer.lname,
         phone: phone !== undefined ? phone : customer.phone,
         gender: gender !== undefined ? gender : customer.gender,
         birthday: birthday !== undefined ? birthday : customer.birthday,
@@ -177,15 +223,15 @@ const updateProfile = async (req, res) => {
     }
 
     return res.json({
-      id: user.id,
+      id: user.u_id,
       email: user.email,
-      name: customer?.name,
+      fname: customer?.fname,
+      lname: customer?.lname,
       phone: customer?.phone,
       gender: customer?.gender,
       birthday: customer?.birthday,
       address: customer?.address,
       role: user.role,
-      type: 'user',
     });
   } catch (err) {
     return res.status(500).json({ message: err.message });

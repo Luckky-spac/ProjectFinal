@@ -57,7 +57,7 @@ function RoomTransferForm({ booking, onSuccess, onCancel }) {
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    api.get('/rooms').then((r) => setRooms(r.data.filter((rm) => rm.isAvailable && rm.id !== booking.room_id))).catch(() => {});
+    api.get('/rooms').then((r) => setRooms(r.data.filter((rm) => rm.isAvailable && rm.r_id !== booking.r_id))).catch(() => {});
   }, [booking.room_id]);
 
   const handleSubmit = async (e) => {
@@ -65,7 +65,7 @@ function RoomTransferForm({ booking, onSuccess, onCancel }) {
     if (!toRoomId) return;
     setLoading(true);
     try {
-      const res = await api.patch(`/bookings/${booking.id}/transfer`, { to_room_id: Number(toRoomId), reason });
+      const res = await api.patch(`/bookings/${booking.b_id}/transfer`, { to_room_id: Number(toRoomId), reason });
       onSuccess(res.data);
     } catch (err) {
       alert(err.response?.data?.message || 'ເກີດຂໍ້ຜິດພາດ');
@@ -80,7 +80,7 @@ function RoomTransferForm({ booking, onSuccess, onCancel }) {
       <select value={toRoomId} onChange={(e) => setToRoomId(e.target.value)} required
         className="border rounded-lg px-3 py-2 text-sm">
         <option value="">-- ເລືອກຫ້ອງໃໝ່ --</option>
-        {rooms.map((r) => <option key={r.id} value={r.id}>ຫ້ອງ {r.room_number} — {r.roomType?.name}</option>)}
+        {rooms.map((r) => <option key={r.r_id} value={r.r_id}>ຫ້ອງ {r.room_number} — {r.roomType?.name}</option>)}
       </select>
       <input placeholder="ເຫດຜົນ (ບໍ່ບັງຄັບ)" value={reason} onChange={(e) => setReason(e.target.value)}
         className="border rounded-lg px-3 py-2 text-sm" />
@@ -110,7 +110,7 @@ function BookingRow({ booking, onUpdate }) {
   const changeStatus = async (status) => {
     setLoading(true);
     try {
-      const res = await api.patch(`/bookings/${booking.id}/status`, { status });
+      const res = await api.patch(`/bookings/${booking.b_id}/status`, { status });
       onUpdate(res.data);
     } catch (err) {
       alert(err.response?.data?.message || 'ເກີດຂໍ້ຜິດພາດ');
@@ -122,7 +122,7 @@ function BookingRow({ booking, onUpdate }) {
   const confirmCheckin = async () => {
     setLoading(true);
     try {
-      const res = await api.patch(`/bookings/${booking.id}/checkin/confirm`);
+      const res = await api.patch(`/bookings/${booking.b_id}/checkin/confirm`);
       onUpdate(res.data);
     } catch (err) {
       alert(err.response?.data?.message || 'ເກີດຂໍ້ຜິດພາດ');
@@ -134,7 +134,7 @@ function BookingRow({ booking, onUpdate }) {
   const confirmCheckout = async () => {
     setLoading(true);
     try {
-      const res = await api.patch(`/bookings/${booking.id}/checkout/confirm`);
+      const res = await api.patch(`/bookings/${booking.b_id}/checkout/confirm`);
       onUpdate(res.data);
     } catch (err) {
       alert(err.response?.data?.message || 'ເກີດຂໍ້ຜິດພາດ');
@@ -147,7 +147,7 @@ function BookingRow({ booking, onUpdate }) {
     if (!pendingFinalPayment) return;
     setLoading(true);
     try {
-      const res = await api.patch(`/payments/${pendingFinalPayment.id}/confirm`);
+      const res = await api.patch(`/payments/${pendingFinalPayment.pay_id}/confirm`);
       onUpdate(res.data.booking);
     } catch (err) {
       alert(err.response?.data?.message || 'ເກີດຂໍ້ຜິດພາດ');
@@ -160,8 +160,8 @@ function BookingRow({ booking, onUpdate }) {
     if (!pendingFinalPayment) return;
     setLoading(true);
     try {
-      await api.patch(`/payments/${pendingFinalPayment.id}/reject`);
-      onUpdate({ ...booking, payments: booking.payments.map((p) => p.id === pendingFinalPayment.id ? { ...p, status: 'rejected' } : p) });
+      await api.patch(`/payments/${pendingFinalPayment.pay_id}/reject`);
+      onUpdate({ ...booking, payments: booking.payments.map((p) => p.pay_id === pendingFinalPayment.pay_id ? { ...p, status: 'rejected' } : p) });
     } catch (err) {
       alert(err.response?.data?.message || 'ເກີດຂໍ້ຜິດພາດ');
     } finally {
@@ -193,7 +193,7 @@ function BookingRow({ booking, onUpdate }) {
             )}
           </div>
           <p className="text-xs text-gray-500 mt-0.5">
-            {booking.user?.customer?.name} · {formatDateTime(booking.start_time)} – {formatDateTime(booking.end_time)}
+            {[booking.user?.customer?.fname, booking.user?.customer?.lname].filter(Boolean).join(' ')} · {formatDateTime(booking.start_time)} – {formatDateTime(booking.end_time)}
           </p>
         </div>
         <span className="text-sm font-bold text-[#7B2438] whitespace-nowrap">
@@ -206,7 +206,7 @@ function BookingRow({ booking, onUpdate }) {
       {expanded && (
         <div className="border-t px-4 py-3 flex flex-col gap-3 bg-gray-50">
           <div className="grid grid-cols-2 gap-2 text-sm text-gray-600">
-            <div><span className="text-gray-400">ຜູ້ຈອງ: </span>{booking.user?.customer?.name}</div>
+            <div><span className="text-gray-400">ຜູ້ຈອງ: </span>{[booking.user?.customer?.fname, booking.user?.customer?.lname].filter(Boolean).join(' ')}</div>
             <div><span className="text-gray-400">ໂທ: </span>{booking.user?.customer?.phone || '-'}</div>
             <div><span className="text-gray-400">ຜູ້ເຂົ້າໃຊ້: </span>{booking.guests} ຄົນ</div>
             <div><span className="text-gray-400">ມັດຈຳ: </span>฿{Number(booking.deposit_amount || 0).toLocaleString()}</div>
@@ -301,7 +301,7 @@ export default function StaffDashboardPage() {
   useEffect(() => { fetchBookings(tab); }, [tab]);
 
   const handleUpdate = (updated) => {
-    setBookings((prev) => prev.map((b) => (b.id === updated.id ? updated : b)));
+    setBookings((prev) => prev.map((b) => (b.b_id === updated.b_id ? updated : b)));
   };
 
   const needAttention = bookings.filter(
@@ -390,7 +390,7 @@ export default function StaffDashboardPage() {
           ) : (
             <div className="flex flex-col gap-3">
               {bookings.map((b) => (
-                <BookingRow key={b.id} booking={b} onUpdate={handleUpdate} />
+                <BookingRow key={b.b_id} booking={b} onUpdate={handleUpdate} />
               ))}
             </div>
           )}

@@ -98,7 +98,7 @@ export default function BookingPage() {
         guests: parseInt(guests),
         note,
       });
-      navigate('/my-bookings', { state: { newBookingId: res.data.id } });
+      navigate('/my-bookings', { state: { newBookingId: res.data.b_id } });
     } catch (err) {
       setSubmitError(err.response?.data?.message || 'ຈອງຫ້ອງລົ້ມເຫຼວ ກະລຸນາລອງໃໝ່');
     } finally {
@@ -172,7 +172,7 @@ export default function BookingPage() {
                   👤 ຊື່ ແລະ ນາມສະກຸນ
                 </label>
                 <input
-                  value={user?.name || ''}
+                  value={user?.name || (user?.fname ? `${user.fname} ${user.lname || ''}`.trim() : '') || ''}
                   disabled
                   className="w-full bg-rose-900 border border-rose-700 text-white rounded-lg px-3 py-2 text-sm placeholder-rose-500 cursor-not-allowed"
                 />

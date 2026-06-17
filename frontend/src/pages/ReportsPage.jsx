@@ -55,9 +55,9 @@ function BookingsReport() {
             </tr></thead>
             <tbody>
               {data.map((b) => (
-                <tr key={b.id} className="border-b last:border-0">
+                <tr key={b.b_id} className="border-b last:border-0">
                   <td className="py-2 pr-3 font-medium">{b.room?.room_number}</td>
-                  <td className="py-2 pr-3 text-gray-600">{b.user?.customer?.name}</td>
+                  <td className="py-2 pr-3 text-gray-600">{[b.user?.customer?.fname, b.user?.customer?.lname].filter(Boolean).join(' ')}</td>
                   <td className="py-2 pr-3 text-gray-500 text-xs">{formatDateTime(b.start_time)}</td>
                   <td className="py-2 pr-3 text-gray-500 text-xs">{formatDateTime(b.end_time)}</td>
                   <td className="py-2 pr-3"><span className="text-xs bg-gray-100 px-2 py-0.5 rounded-full">{STATUS_LAO[b.status] || b.status}</span></td>
@@ -145,7 +145,7 @@ function RoomsReport() {
             </tr></thead>
             <tbody>
               {data.map((r) => (
-                <tr key={r.id} className="border-b last:border-0">
+                <tr key={r.r_id} className="border-b last:border-0">
                   <td className="py-2 pr-3 font-medium">{r.room_number}</td>
                   <td className="py-2 pr-3 text-gray-500">{r.roomType?.name}</td>
                   <td className="py-2 pr-3 text-center">{r.total_bookings}</td>
@@ -184,8 +184,8 @@ function CustomersReport() {
             </tr></thead>
             <tbody>
               {data.map((u) => (
-                <tr key={u.id} className="border-b last:border-0">
-                  <td className="py-2 pr-3 font-medium">{u.name}</td>
+                <tr key={u.u_id} className="border-b last:border-0">
+                  <td className="py-2 pr-3 font-medium">{[u.fname, u.lname].filter(Boolean).join(' ')}</td>
                   <td className="py-2 pr-3 text-gray-500">{u.email}</td>
                   <td className="py-2 pr-3 text-gray-500">{u.phone || '-'}</td>
                   <td className="py-2 pr-3 text-center">{u.total_bookings}</td>

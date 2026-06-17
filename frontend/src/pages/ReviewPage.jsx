@@ -27,7 +27,7 @@ function ReviewForm({ booking, onSuccess }) {
     setError('');
     setLoading(true);
     try {
-      await api.post('/reviews', { booking_id: booking.id, rating, comment });
+      await api.post('/reviews', { booking_id: booking.b_id, rating, comment });
       onSuccess();
     } catch (err) {
       setError(err.response?.data?.message || 'ເກີດຂໍ້ຜິດພາດ');
@@ -94,8 +94,8 @@ export default function ReviewPage() {
     fetchData();
   };
 
-  const reviewedIds = new Set(reviews.map((r) => r.booking_id));
-  const reviewable = bookings.filter((b) => b.status === 'completed' && !reviewedIds.has(b.id));
+  const reviewedIds = new Set(reviews.map((r) => r.b_id));
+  const reviewable = bookings.filter((b) => b.status === 'completed' && !reviewedIds.has(b.b_id));
 
   if (loading) {
     return <div className="flex justify-center py-20 text-gray-400">ກຳລັງໂຫຼດ...</div>;
@@ -126,7 +126,7 @@ export default function ReviewPage() {
           <div className="flex flex-col gap-4 mb-8">
             <h2 className="font-semibold text-gray-700">ລໍລີວິວ ({reviewable.length})</h2>
             {reviewable.map((b) => (
-              <ReviewForm key={b.id} booking={b} onSuccess={handleReviewed} />
+              <ReviewForm key={b.b_id} booking={b} onSuccess={handleReviewed} />
             ))}
           </div>
         )}
@@ -136,7 +136,7 @@ export default function ReviewPage() {
             <h2 className="font-semibold text-gray-700 mb-3">ລີວິວທີ່ຂຽນແລ້ວ ({reviews.length})</h2>
             <div className="flex flex-col gap-3">
               {reviews.map((r) => (
-                <div key={r.id} className="bg-white rounded-xl shadow-sm p-4">
+                <div key={r.re_id} className="bg-white rounded-xl shadow-sm p-4">
                   <div className="flex items-center gap-2 mb-1">
                     <span className="text-yellow-400 text-lg">
                       {'★'.repeat(r.rating || 0)}{'☆'.repeat(5 - (r.rating || 0))}

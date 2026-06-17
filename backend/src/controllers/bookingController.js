@@ -3,52 +3,52 @@ const { Booking, Room, RoomType, Payment, User, Customer, RoomTransfer } = requi
 
 const bookingIncludes = [
   { model: Room, as: 'room', include: [{ model: RoomType, as: 'roomType' }] },
-  { model: User, as: 'user', attributes: ['id', 'email'], include: [{ model: Customer, as: 'customer', attributes: ['name', 'phone'] }] },
+  { model: User, as: 'user', attributes: ['u_id', 'email'], include: [{ model: Customer, as: 'customer', attributes: ['fname', 'lname', 'phone'] }] },
   { model: Payment, as: 'payments' },
 ];
 
-// POST /api/bookings  (ลูกค้าเท่านั้น)
+// POST /api/bookings  (ລູກຄ້າເທົ່ານັ້ນ)
 const createBooking = async (req, res) => {
   try {
     const { room_id, start_time, end_time, guests, note } = req.body;
-    const user_id = req.user.id;
+    const u_id = req.user.id;
 
     if (!room_id || !start_time || !end_time) {
-      return res.status(400).json({ message: 'กรุณากรอกข้อมูลให้ครบ' });
+      return res.status(400).json({ message: 'ກະລຸນາກອກຂໍ້ມູນໃຫ້ຄົບ' });
     }
 
     const start = new Date(start_time);
     const end = new Date(end_time);
     if (isNaN(start) || isNaN(end) || start >= end) {
-      return res.status(400).json({ message: 'วันเวลาไม่ถูกต้อง' });
+      return res.status(400).json({ message: 'ວັນເວລາບໍ່ຖືກຕ້ອງ' });
     }
 
     const room = await Room.findByPk(room_id, {
       include: [{ model: RoomType, as: 'roomType' }],
     });
-    if (!room) return res.status(404).json({ message: 'ไม่พบห้องนี้' });
+    if (!room) return res.status(404).json({ message: 'ບໍ່ພົບຫ້ອງນີ້' });
     if (room.status === 'maintenance') {
-      return res.status(400).json({ message: 'ห้องนี้กำลังซ่อมบำรุง' });
+      return res.status(400).json({ message: 'ຫ້ອງນີ້ກຳລັງຊ່ອມບຳລຸງ' });
     }
 
     const overlap = await Booking.findOne({
       where: {
-        room_id,
+        r_id: room_id,
         status: { [Op.notIn]: ['cancelled'] },
         start_time: { [Op.lt]: end },
         end_time: { [Op.gt]: start },
       },
     });
     if (overlap) {
-      return res.status(400).json({ message: 'ห้องนี้ถูกจองในช่วงเวลาดังกล่าวแล้ว' });
+      return res.status(400).json({ message: 'ຫ້ອງນີ້ຖືກຈອງໃນຊ່ວງເວລານັ້ນແລ້ວ' });
     }
 
     const hours = (end - start) / (1000 * 60 * 60);
     const total_price = parseFloat((hours * parseFloat(room.roomType.price_per_hour)).toFixed(2));
 
     const booking = await Booking.create({
-      user_id,
-      room_id,
+      u_id,
+      r_id: room_id,
       start_time: start,
       end_time: end,
       guests: guests || 1,
@@ -57,18 +57,18 @@ const createBooking = async (req, res) => {
       note: note || null,
     });
 
-    const full = await Booking.findByPk(booking.id, { include: bookingIncludes });
+    const full = await Booking.findByPk(booking.b_id, { include: bookingIncludes });
     res.status(201).json(full);
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
 };
 
-// GET /api/bookings/my  (ลูกค้าดูของตัวเอง)
+// GET /api/bookings/my  (ລູກຄ້າດູຂອງຕົວເອງ)
 const getMyBookings = async (req, res) => {
   try {
     const bookings = await Booking.findAll({
-      where: { user_id: req.user.id },
+      where: { u_id: req.user.id },
       include: bookingIncludes,
       order: [['createdAt', 'DESC']],
     });
@@ -82,10 +82,9 @@ const getMyBookings = async (req, res) => {
 const getBookingById = async (req, res) => {
   try {
     const booking = await Booking.findByPk(req.params.id, { include: bookingIncludes });
-    if (!booking) return res.status(404).json({ message: 'ไม่พบการจองนี้' });
-    // ลูกค้าดูได้เฉพาะของตัวเอง, พนักงานดูได้ทั้งหมด
-    if (req.user.type === 'user' && booking.user_id !== req.user.id) {
-      return res.status(403).json({ message: 'ไม่มีสิทธิ์เข้าถึงข้อมูลนี้' });
+    if (!booking) return res.status(404).json({ message: 'ບໍ່ພົບການຈອງນີ້' });
+    if (req.user.role === 'member' && booking.u_id !== req.user.id) {
+      return res.status(403).json({ message: 'ບໍ່ມີສິດເຂົ້າເຖິງຂໍ້ມູນນີ້' });
     }
     res.json(booking);
   } catch (err) {
@@ -93,35 +92,33 @@ const getBookingById = async (req, res) => {
   }
 };
 
-// PATCH /api/bookings/:id/deposit  (ลูกค้าอัปโหลด slip มัดจำ)
+// PATCH /api/bookings/:id/deposit  (ລູກຄ້າ upload slip ມັດຈຳ)
 const uploadDeposit = async (req, res) => {
   try {
     const booking = await Booking.findByPk(req.params.id);
-    if (!booking) return res.status(404).json({ message: 'ไม่พบการจองนี้' });
-    if (booking.user_id !== req.user.id) {
-      return res.status(403).json({ message: 'ไม่มีสิทธิ์เข้าถึงข้อมูลนี้' });
+    if (!booking) return res.status(404).json({ message: 'ບໍ່ພົບການຈອງນີ້' });
+    if (booking.u_id !== req.user.id) {
+      return res.status(403).json({ message: 'ບໍ່ມີສິດເຂົ້າເຖິງຂໍ້ມູນນີ້' });
     }
     if (booking.status !== 'pending') {
-      return res.status(400).json({ message: 'ไม่สามารถอัปโหลด slip ในสถานะนี้' });
+      return res.status(400).json({ message: 'ບໍ່ສາມາດ upload slip ໃນສະຖານະນີ້' });
     }
-    if (!req.file) return res.status(400).json({ message: 'กรุณาเลือกไฟล์ slip' });
+    if (!req.file) return res.status(400).json({ message: 'ກະລຸນາເລືອກໄຟລ slip' });
 
     const deposit_amount = parseFloat(req.body.deposit_amount);
     if (!deposit_amount || deposit_amount <= 0) {
-      return res.status(400).json({ message: 'กรุณาระบุจำนวนเงินมัดจำ' });
+      return res.status(400).json({ message: 'ກະລຸນາລະບຸຈຳນວນເງິນມັດຈຳ' });
     }
     if (deposit_amount > parseFloat(booking.total_price)) {
-      return res.status(400).json({ message: 'จำนวนเงินมัดจำมากกว่าราคารวม' });
+      return res.status(400).json({ message: 'ຈຳນວນເງິນມັດຈຳຫຼາຍກວ່າລາຄາລວມ' });
     }
 
     const slip_url = `/uploads/${req.file.filename}`;
 
-    // อัปเดต booking
     await booking.update({ deposit_amount, deposit_slip: slip_url });
 
-    // สร้าง Payment record สำหรับมัดจำ
     await Payment.create({
-      booking_id: booking.id,
+      b_id: booking.b_id,
       amount: deposit_amount,
       type: 'deposit',
       method: req.body.method || 'transfer',
@@ -129,46 +126,45 @@ const uploadDeposit = async (req, res) => {
       status: 'pending',
     });
 
-    const full = await Booking.findByPk(booking.id, { include: bookingIncludes });
+    const full = await Booking.findByPk(booking.b_id, { include: bookingIncludes });
     res.json(full);
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
 };
 
-// PATCH /api/bookings/:id/status  (พนักงานเปลี่ยนสถานะ)
+// PATCH /api/bookings/:id/status  (ພະນັກງານປ່ຽນສະຖານະ)
 const updateStatus = async (req, res) => {
   try {
     const { status } = req.body;
     const allowed = ['confirmed', 'checked_in', 'completed', 'cancelled'];
     if (!allowed.includes(status)) {
-      return res.status(400).json({ message: 'สถานะไม่ถูกต้อง' });
+      return res.status(400).json({ message: 'ສະຖານະບໍ່ຖືກຕ້ອງ' });
     }
 
     const booking = await Booking.findByPk(req.params.id);
-    if (!booking) return res.status(404).json({ message: 'ไม่พบการจองนี้' });
+    if (!booking) return res.status(404).json({ message: 'ບໍ່ພົບການຈອງນີ້' });
 
     const updates = { status };
     if (status === 'confirmed') {
       updates.confirmed_by = req.user.id;
-      // ยืนยัน deposit payment ด้วย
       await Payment.update(
         { status: 'confirmed', confirmed_by: req.user.id, confirmed_at: new Date() },
-        { where: { booking_id: booking.id, type: 'deposit', status: 'pending' } }
+        { where: { b_id: booking.b_id, type: 'deposit', status: 'pending' } }
       );
     }
     if (status === 'checked_in') updates.actual_check_in = new Date();
     if (status === 'completed') updates.actual_check_out = new Date();
 
     await booking.update(updates);
-    const full = await Booking.findByPk(booking.id, { include: bookingIncludes });
+    const full = await Booking.findByPk(booking.b_id, { include: bookingIncludes });
     res.json(full);
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
 };
 
-// GET /api/bookings  (พนักงานดูทั้งหมด)
+// GET /api/bookings  (ພະນັກງານດູທັງໝົດ)
 const getAllBookings = async (req, res) => {
   try {
     const { status } = req.query;
@@ -184,111 +180,110 @@ const getAllBookings = async (req, res) => {
   }
 };
 
-// PATCH /api/bookings/:id/checkin  (ลูกค้ากด "ฉันมาถึงแล้ว")
+// PATCH /api/bookings/:id/checkin
 const checkin = async (req, res) => {
   try {
     const booking = await Booking.findByPk(req.params.id);
-    if (!booking) return res.status(404).json({ message: 'ไม่พบการจองนี้' });
-    if (req.user.type === 'user' && booking.user_id !== req.user.id) {
-      return res.status(403).json({ message: 'ไม่มีสิทธิ์เข้าถึงข้อมูลนี้' });
+    if (!booking) return res.status(404).json({ message: 'ບໍ່ພົບການຈອງນີ້' });
+    if (req.user.role === 'member' && booking.u_id !== req.user.id) {
+      return res.status(403).json({ message: 'ບໍ່ມີສິດເຂົ້າເຖິງຂໍ້ມູນນີ້' });
     }
     if (booking.status !== 'confirmed') {
-      return res.status(400).json({ message: 'การจองต้องได้รับการยืนยันก่อนเช็คอิน' });
+      return res.status(400).json({ message: 'ການຈອງຕ້ອງໄດ້ຮັບການຢືນຢັນກ່ອນ check-in' });
     }
     await booking.update({ status: 'checking_in' });
-    const full = await Booking.findByPk(booking.id, { include: bookingIncludes });
+    const full = await Booking.findByPk(booking.b_id, { include: bookingIncludes });
     res.json(full);
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
 };
 
-// PATCH /api/bookings/:id/checkin/confirm  (Staff ยืนยัน check-in)
+// PATCH /api/bookings/:id/checkin/confirm  (Staff ຢືນຢັນ check-in)
 const checkinConfirm = async (req, res) => {
   try {
     const booking = await Booking.findByPk(req.params.id);
-    if (!booking) return res.status(404).json({ message: 'ไม่พบการจองนี้' });
+    if (!booking) return res.status(404).json({ message: 'ບໍ່ພົບການຈອງນີ້' });
     if (!['confirmed', 'checking_in'].includes(booking.status)) {
-      return res.status(400).json({ message: 'ไม่สามารถยืนยัน check-in ในสถานะนี้' });
+      return res.status(400).json({ message: 'ບໍ່ສາມາດຢືນຢັນ check-in ໃນສະຖານະນີ້' });
     }
     await booking.update({ status: 'checked_in', actual_check_in: new Date() });
-    await Room.update({ status: 'occupied' }, { where: { id: booking.room_id } });
-    const full = await Booking.findByPk(booking.id, { include: bookingIncludes });
+    await Room.update({ status: 'occupied' }, { where: { r_id: booking.r_id } });
+    const full = await Booking.findByPk(booking.b_id, { include: bookingIncludes });
     res.json(full);
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
 };
 
-// PATCH /api/bookings/:id/checkout  (ลูกค้ากด "ออกจากห้อง")
+// PATCH /api/bookings/:id/checkout
 const checkout = async (req, res) => {
   try {
     const booking = await Booking.findByPk(req.params.id);
-    if (!booking) return res.status(404).json({ message: 'ไม่พบการจองนี้' });
-    if (req.user.type === 'user' && booking.user_id !== req.user.id) {
-      return res.status(403).json({ message: 'ไม่มีสิทธิ์เข้าถึงข้อมูลนี้' });
+    if (!booking) return res.status(404).json({ message: 'ບໍ່ພົບການຈອງນີ້' });
+    if (req.user.role === 'member' && booking.u_id !== req.user.id) {
+      return res.status(403).json({ message: 'ບໍ່ມີສິດເຂົ້າເຖິງຂໍ້ມູນນີ້' });
     }
     if (booking.status !== 'checked_in') {
-      return res.status(400).json({ message: 'ต้องเช็คอินก่อนจึงจะเช็คเอาท์ได้' });
+      return res.status(400).json({ message: 'ຕ້ອງ check-in ກ່ອນຈຶ່ງ check-out ໄດ້' });
     }
     await booking.update({ status: 'checking_out' });
-    const full = await Booking.findByPk(booking.id, { include: bookingIncludes });
+    const full = await Booking.findByPk(booking.b_id, { include: bookingIncludes });
     res.json(full);
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
 };
 
-// PATCH /api/bookings/:id/checkout/confirm  (Staff ยืนยัน check-out)
+// PATCH /api/bookings/:id/checkout/confirm  (Staff ຢືນຢັນ check-out)
 const checkoutConfirm = async (req, res) => {
   try {
     const booking = await Booking.findByPk(req.params.id);
-    if (!booking) return res.status(404).json({ message: 'ไม่พบการจองนี้' });
+    if (!booking) return res.status(404).json({ message: 'ບໍ່ພົບການຈອງນີ້' });
     if (!['checked_in', 'checking_out'].includes(booking.status)) {
-      return res.status(400).json({ message: 'ไม่สามารถยืนยัน check-out ในสถานะนี้' });
+      return res.status(400).json({ message: 'ບໍ່ສາມາດຢືນຢັນ check-out ໃນສະຖານະນີ້' });
     }
     await booking.update({ status: 'completed', actual_check_out: new Date() });
-    await Room.update({ status: 'available' }, { where: { id: booking.room_id } });
-    const full = await Booking.findByPk(booking.id, { include: bookingIncludes });
+    await Room.update({ status: 'available' }, { where: { r_id: booking.r_id } });
+    const full = await Booking.findByPk(booking.b_id, { include: bookingIncludes });
     res.json(full);
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
 };
 
-// PATCH /api/bookings/:id/extend  (ต่อเวลา)
+// PATCH /api/bookings/:id/extend  (ຕໍ່ເວລາ)
 const extendBooking = async (req, res) => {
   try {
     const booking = await Booking.findByPk(req.params.id, {
       include: [{ model: Room, as: 'room', include: [{ model: RoomType, as: 'roomType' }] }],
     });
-    if (!booking) return res.status(404).json({ message: 'ไม่พบการจองนี้' });
-    if (req.user.type === 'user' && booking.user_id !== req.user.id) {
-      return res.status(403).json({ message: 'ไม่มีสิทธิ์เข้าถึงข้อมูลนี้' });
+    if (!booking) return res.status(404).json({ message: 'ບໍ່ພົບການຈອງນີ້' });
+    if (req.user.role === 'member' && booking.u_id !== req.user.id) {
+      return res.status(403).json({ message: 'ບໍ່ມີສິດເຂົ້າເຖິງຂໍ້ມູນນີ້' });
     }
     if (booking.status !== 'checked_in') {
-      return res.status(400).json({ message: 'ต้องอยู่ในสถานะ checked_in จึงจะต่อเวลาได้' });
+      return res.status(400).json({ message: 'ຕ້ອງຢູ່ໃນສະຖານະ checked_in ຈຶ່ງຕໍ່ເວລາໄດ້' });
     }
 
     const { extra_hours } = req.body;
     if (!extra_hours || extra_hours <= 0) {
-      return res.status(400).json({ message: 'กรุณาระบุจำนวนชั่วโมงที่ต้องการต่อ' });
+      return res.status(400).json({ message: 'ກະລຸນາລະບຸຈຳນວນຊົ່ວໂມງທີ່ຕ້ອງການຕໍ່' });
     }
 
     const newEnd = new Date(new Date(booking.end_time).getTime() + Number(extra_hours) * 3600000);
 
-    // เช็คว่าห้องว่างในช่วงที่ขอต่อ
     const overlap = await Booking.findOne({
       where: {
-        room_id: booking.room_id,
-        id: { [Op.ne]: booking.id },
+        r_id: booking.r_id,
+        b_id: { [Op.ne]: booking.b_id },
         status: { [Op.notIn]: ['cancelled'] },
         start_time: { [Op.lt]: newEnd },
         end_time: { [Op.gt]: booking.end_time },
       },
     });
     if (overlap) {
-      return res.status(400).json({ message: 'ห้องถูกจองต่อในช่วงเวลาดังกล่าวแล้ว' });
+      return res.status(400).json({ message: 'ຫ້ອງຖືກຈອງຕໍ່ໃນຊ່ວງເວລານັ້ນແລ້ວ' });
     }
 
     const pricePerHour = parseFloat(booking.room.roomType.price_per_hour);
@@ -296,65 +291,63 @@ const extendBooking = async (req, res) => {
     const newTotal = parseFloat((parseFloat(booking.total_price) + extraPrice).toFixed(2));
 
     await booking.update({ end_time: newEnd, total_price: newTotal });
-    const full = await Booking.findByPk(booking.id, { include: bookingIncludes });
+    const full = await Booking.findByPk(booking.b_id, { include: bookingIncludes });
     res.json({ booking: full, extra_price: extraPrice });
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
 };
 
-// PATCH /api/bookings/:id/transfer  (Staff ย้ายห้อง)
+// PATCH /api/bookings/:id/transfer  (Staff ຍ້າຍຫ້ອງ)
 const transferRoom = async (req, res) => {
   try {
     const booking = await Booking.findByPk(req.params.id);
-    if (!booking) return res.status(404).json({ message: 'ไม่พบการจองนี้' });
+    if (!booking) return res.status(404).json({ message: 'ບໍ່ພົບການຈອງນີ້' });
     if (!['confirmed', 'checked_in'].includes(booking.status)) {
-      return res.status(400).json({ message: 'ไม่สามารถย้ายห้องในสถานะนี้' });
+      return res.status(400).json({ message: 'ບໍ່ສາມາດຍ້າຍຫ້ອງໃນສະຖານະນີ້' });
     }
 
     const { to_room_id, reason } = req.body;
-    if (!to_room_id) return res.status(400).json({ message: 'กรุณาเลือกห้องใหม่' });
-    if (to_room_id === booking.room_id) {
-      return res.status(400).json({ message: 'ห้องใหม่ต้องแตกต่างจากห้องเดิม' });
+    if (!to_room_id) return res.status(400).json({ message: 'ກະລຸນາເລືອກຫ້ອງໃໝ່' });
+    if (to_room_id === booking.r_id) {
+      return res.status(400).json({ message: 'ຫ້ອງໃໝ່ຕ້ອງແຕກຕ່າງຈາກຫ້ອງເດີມ' });
     }
 
     const newRoom = await Room.findByPk(to_room_id);
-    if (!newRoom) return res.status(404).json({ message: 'ไม่พบห้องใหม่' });
+    if (!newRoom) return res.status(404).json({ message: 'ບໍ່ພົບຫ້ອງໃໝ່' });
     if (newRoom.status !== 'available') {
-      return res.status(400).json({ message: 'ห้องใหม่ไม่ว่าง' });
+      return res.status(400).json({ message: 'ຫ້ອງໃໝ່ບໍ່ຫວ່າງ' });
     }
 
-    // เช็ค overlap ในห้องใหม่
     const overlap = await Booking.findOne({
       where: {
-        room_id: to_room_id,
+        r_id: to_room_id,
         status: { [Op.notIn]: ['cancelled'] },
         start_time: { [Op.lt]: booking.end_time },
         end_time: { [Op.gt]: booking.start_time },
       },
     });
     if (overlap) {
-      return res.status(400).json({ message: 'ห้องใหม่ถูกจองในช่วงเวลาดังกล่าวแล้ว' });
+      return res.status(400).json({ message: 'ຫ້ອງໃໝ່ຖືກຈອງໃນຊ່ວງເວລານັ້ນແລ້ວ' });
     }
 
-    const fromRoomId = booking.room_id;
+    const fromRoomId = booking.r_id;
 
     await RoomTransfer.create({
-      booking_id: booking.id,
-      from_room_id: fromRoomId,
-      to_room_id,
+      b_id: booking.b_id,
+      from_r_id: fromRoomId,
+      to_r_id: to_room_id,
       reason: reason || null,
       transferred_by: req.user.id,
     });
 
-    // อัปเดตสถานะห้องและ booking
     if (booking.status === 'checked_in') {
-      await Room.update({ status: 'available' }, { where: { id: fromRoomId } });
-      await Room.update({ status: 'occupied' }, { where: { id: to_room_id } });
+      await Room.update({ status: 'available' }, { where: { r_id: fromRoomId } });
+      await Room.update({ status: 'occupied' }, { where: { r_id: to_room_id } });
     }
-    await booking.update({ room_id: to_room_id });
+    await booking.update({ r_id: to_room_id });
 
-    const full = await Booking.findByPk(booking.id, { include: bookingIncludes });
+    const full = await Booking.findByPk(booking.b_id, { include: bookingIncludes });
     res.json(full);
   } catch (err) {
     res.status(500).json({ message: err.message });

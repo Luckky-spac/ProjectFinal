@@ -38,7 +38,7 @@ function DepositUploadForm({ booking, onSuccess }) {
     fd.append('deposit_amount', amount);
     setUploading(true);
     try {
-      const res = await api.patch(`/bookings/${booking.id}/deposit`, fd);
+      const res = await api.patch(`/bookings/${booking.b_id}/deposit`, fd);
       onSuccess(res.data);
     } catch (err) {
       setError(err.response?.data?.message || 'ອັບໂຫຼດລົ້ມເຫຼວ');
@@ -89,7 +89,7 @@ function FinalPaymentForm({ booking, onSuccess }) {
     if (!file) { setError('ກະລຸນາເລືອກໄຟລ໌ສະລິບ'); return; }
     const fd = new FormData();
     fd.append('slip', file);
-    fd.append('booking_id', booking.id);
+    fd.append('booking_id', booking.b_id);
     fd.append('amount', remaining.toFixed(2));
     fd.append('method', method);
     setUploading(true);
@@ -176,7 +176,7 @@ function ExtendForm({ booking, onSuccess }) {
     setError('');
     setLoading(true);
     try {
-      const res = await api.patch(`/bookings/${booking.id}/extend`, { extra_hours: hours });
+      const res = await api.patch(`/bookings/${booking.b_id}/extend`, { extra_hours: hours });
       onSuccess(res.data.booking);
       alert(`ຕໍ່ເວລາສຳເລັດ! ຄ່າໃຊ້ຈ່າຍເພີ່ມ ฿${Number(res.data.extra_price).toLocaleString()}`);
     } catch (err) {
@@ -219,7 +219,7 @@ function BookingCard({ booking, isNew, onUpdate }) {
     if (!window.confirm('ຢືນຢັນວ່າທ່ານມາເຖິງສະຖານທີ່ແລ້ວ?')) return;
     setActionLoading(true);
     try {
-      const res = await api.patch(`/bookings/${booking.id}/checkin`);
+      const res = await api.patch(`/bookings/${booking.b_id}/checkin`);
       onUpdate(res.data);
     } catch (err) {
       alert(err.response?.data?.message || 'ເກີດຂໍ້ຜິດພາດ');
@@ -232,7 +232,7 @@ function BookingCard({ booking, isNew, onUpdate }) {
     if (!window.confirm('ຢືນຢັນວ່າທ່ານອອກຈາກຫ້ອງແລ້ວ?')) return;
     setActionLoading(true);
     try {
-      const res = await api.patch(`/bookings/${booking.id}/checkout`);
+      const res = await api.patch(`/bookings/${booking.b_id}/checkout`);
       onUpdate(res.data);
     } catch (err) {
       alert(err.response?.data?.message || 'ເກີດຂໍ້ຜິດພາດ');
@@ -363,7 +363,7 @@ export default function MyBookingsPage() {
   }, []);
 
   const handleUpdate = (updated) => {
-    setBookings((prev) => prev.map((b) => (b.id === updated.id ? updated : b)));
+    setBookings((prev) => prev.map((b) => (b.b_id === updated.b_id ? updated : b)));
   };
 
   return (
@@ -391,7 +391,7 @@ export default function MyBookingsPage() {
         ) : (
           <div className="flex flex-col gap-4">
             {bookings.map((b) => (
-              <BookingCard key={b.id} booking={b} isNew={b.id === newBookingId} onUpdate={handleUpdate} />
+              <BookingCard key={b.b_id} booking={b} isNew={b.b_id === newBookingId} onUpdate={handleUpdate} />
             ))}
           </div>
         )}
