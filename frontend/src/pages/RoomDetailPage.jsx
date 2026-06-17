@@ -65,9 +65,9 @@ export default function RoomDetailPage() {
           ← ກັບໄປຫ້ອງທັງໝົດ
         </button>
 
-        {/* Images — 4 ช่อง เท่ากันทุกช่อง 1:1 */}
+        {/* Images — 2 ช่อง */}
         <div className="grid grid-cols-2 gap-2 mb-5">
-          {[room.image_url, room.image_url2, room.image_url3, room.image_url4].map((url, i) => (
+          {[room.image_url, room.image_url2].map((url, i) => (
             <div key={i} className="relative bg-gray-200 rounded-2xl overflow-hidden" style={{ paddingBottom: '62%' }}>
               <div className="absolute inset-0 flex flex-col items-center justify-center text-gray-400 gap-1">
                 {url ? (

@@ -17,8 +17,6 @@ router.get('/:id', getRoomById);
 const roomImages = upload.fields([
   { name: 'image', maxCount: 1 },
   { name: 'image2', maxCount: 1 },
-  { name: 'image3', maxCount: 1 },
-  { name: 'image4', maxCount: 1 },
 ]);
 router.post('/', authenticate, authorize('admin'), roomImages, createRoom);
 router.put('/:id', authenticate, authorize('admin'), roomImages, updateRoom);

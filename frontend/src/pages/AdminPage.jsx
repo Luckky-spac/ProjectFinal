@@ -269,8 +269,8 @@ function RoomsTab() {
   const [loading, setLoading] = useState(false);
   const [imageFile, setImageFile] = useState(null);
   const [imagePreview, setImagePreview] = useState('');
-  const [imageFiles, setImageFiles] = useState([null, null, null]);
-  const [imagePreviews, setImagePreviews] = useState(['', '', '']);
+  const [imageFiles, setImageFiles] = useState([null]);
+  const [imagePreviews, setImagePreviews] = useState(['']);
 
   const load = useCallback(() => {
     Promise.all([api.get('/rooms'), api.get('/rooms/types')]).then(([r, t]) => { setRooms(r.data); setTypes(t.data); }).catch(() => {});
@@ -283,19 +283,15 @@ function RoomsTab() {
     if (file) { setImageFile(file); setImagePreview(URL.createObjectURL(file)); }
   };
 
-  const resetImages = () => { setImageFile(null); setImagePreview(''); setImageFiles([null,null,null]); setImagePreviews(['','','']); };
+  const resetImages = () => { setImageFile(null); setImagePreview(''); setImageFiles([null]); setImagePreviews(['']); };
   const startAdd = () => { setAdding(true); setEditing(null); setForm(EMPTY_ROOM); resetImages(); };
   const startEdit = (r) => {
     setEditing(r.r_id); setAdding(false);
     setForm({ room_number: r.room_number, room_type_id: String(r.rtype_id), floor: String(r.floor), status: r.status });
     setImageFile(null);
     setImagePreview(r.image_url ? `http://localhost:5000${r.image_url}` : '');
-    setImageFiles([null,null,null]);
-    setImagePreviews([
-      r.image_url2 ? `http://localhost:5000${r.image_url2}` : '',
-      r.image_url3 ? `http://localhost:5000${r.image_url3}` : '',
-      r.image_url4 ? `http://localhost:5000${r.image_url4}` : '',
-    ]);
+    setImageFiles([null]);
+    setImagePreviews([r.image_url2 ? `http://localhost:5000${r.image_url2}` : '']);
   };
 
   const save = async () => {
@@ -308,8 +304,6 @@ function RoomsTab() {
       fd.append('status', form.status);
       if (imageFile) fd.append('image', imageFile);
       if (imageFiles[0]) fd.append('image2', imageFiles[0]);
-      if (imageFiles[1]) fd.append('image3', imageFiles[1]);
-      if (imageFiles[2]) fd.append('image4', imageFiles[2]);
       if (adding) await api.post('/rooms', fd);
       else await api.put(`/rooms/${editing}`, fd);
       load(); setAdding(false); setEditing(null); resetImages();
@@ -346,19 +340,19 @@ function RoomsTab() {
               options={[{ value: 'available', label: 'ວ່າງ' }, { value: 'occupied', label: 'ບໍ່ວ່າງ' }, { value: 'maintenance', label: 'ຊ່ອມບຳລຸງ' }]} />
           </div>
           <div className="mb-3">
-            <label className="text-xs text-gray-500 mb-2 block font-medium">ຮູບພາບຫ້ອງ (ຮູບ 1 = ໜ້າຫຼັກ)</label>
+            <label className="text-xs text-gray-500 mb-2 block font-medium">ຮູບພາບຫ້ອງ</label>
             <div className="grid grid-cols-2 gap-3">
-              {[0,1,2,3].map((i) => {
+              {[0, 1].map((i) => {
                 const isMain = i === 0;
-                const preview = isMain ? imagePreview : imagePreviews[i-1];
-                const label = `ຮູບ ${i+1}${isMain ? ' (ໜ້າຫຼັກ)' : ''}`;
+                const preview = isMain ? imagePreview : imagePreviews[0];
+                const label = `ຮູບ ${i + 1}${isMain ? ' (ໜ້າຫຼັກ)' : ''}`;
                 const onChange = isMain
                   ? onImageChange
                   : (e) => {
                       const file = e.target.files[0];
                       if (file) {
-                        const newFiles = [...imageFiles]; newFiles[i-1] = file; setImageFiles(newFiles);
-                        const newPrev = [...imagePreviews]; newPrev[i-1] = URL.createObjectURL(file); setImagePreviews(newPrev);
+                        setImageFiles([file]);
+                        setImagePreviews([URL.createObjectURL(file)]);
                       }
                     };
                 return (
