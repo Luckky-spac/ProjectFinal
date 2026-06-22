@@ -32,7 +32,6 @@ export default function BookingPage() {
     return '1';
   });
   const [guests, setGuests] = useState('1');
-  const [note, setNote] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState('');
 
@@ -96,7 +95,6 @@ export default function BookingPage() {
         start_time: startISO,
         end_time: endISO,
         guests: parseInt(guests),
-        note,
       });
       navigate('/my-bookings', { state: { newBookingId: res.data.b_id } });
     } catch (err) {
@@ -121,12 +119,14 @@ export default function BookingPage() {
   }
 
   return (
-    <div className="min-h-screen bg-green-50 py-8 px-4">
+    <div className="relative min-h-screen py-8 px-4">
+      <img src="/images/hero.jpeg" alt="" className="fixed inset-0 w-full h-full object-cover -z-10" />
+      <div className="fixed inset-0 bg-black/60 -z-10" />
       <div className="max-w-lg mx-auto">
 
         <button
           onClick={() => navigate('/rooms')}
-          className="text-sm text-[#7B2438] mb-4 hover:underline flex items-center gap-1"
+          className="text-sm text-white mb-4 hover:underline flex items-center gap-1 drop-shadow"
         >
           ← ກັບໄປຫ້ອງ
         </button>
@@ -190,28 +190,16 @@ export default function BookingPage() {
               </div>
             </div>
 
-            {/* Row 2: จำนวนคน + หมายเหตุ */}
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className="text-rose-200 text-xs font-medium flex items-center gap-1 mb-1">
-                  👥 ຈຳນວນຜູ້ໃຊ້
-                </label>
-                <input
-                  type="number" min={1} max={room.roomType?.capacity || 20}
-                  value={guests} onChange={(e) => setGuests(e.target.value)}
-                  className="w-full bg-white border border-rose-300 text-gray-800 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-rose-300"
-                />
-              </div>
-              <div>
-                <label className="text-rose-200 text-xs font-medium flex items-center gap-1 mb-1">
-                  📋 ໝາຍເຫດ
-                </label>
-                <input
-                  value={note} onChange={(e) => setNote(e.target.value)}
-                  placeholder="ຕ້ອງການອຸປະກອນພິເສດ..."
-                  className="w-full bg-white border border-rose-300 text-gray-800 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-rose-300"
-                />
-              </div>
+            {/* Row 2: จำนวนคน */}
+            <div>
+              <label className="text-rose-200 text-xs font-medium flex items-center gap-1 mb-1">
+                👥 ຈຳນວນຜູ້ໃຊ້
+              </label>
+              <input
+                type="number" min={1} max={room.roomType?.capacity || 20}
+                value={guests} onChange={(e) => setGuests(e.target.value)}
+                className="w-full bg-white border border-rose-300 text-gray-800 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-rose-300"
+              />
             </div>
 
             {/* Row 3: วันที่ + ชั่วโมง */}

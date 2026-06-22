@@ -41,15 +41,15 @@ export default function HomePage() {
           <p className="text-white text-base font-bold tracking-widest mb-2 drop-shadow">✨ ຫ້ອງແນະນຳ</p>
         )}
         {roomL && (
-          <div className="bg-white/10 backdrop-blur-sm border border-white/20 rounded-2xl overflow-hidden w-64 mb-5 shadow-xl">
+          <div className="bg-white/10 backdrop-blur-sm border border-white/20 rounded-2xl overflow-hidden w-96 mb-5 shadow-xl">
             {roomL.image_url ? (
-              <img src={roomL.image_url} alt={`ຫ້ອງ ${roomL.room_number}`} className="w-full h-32 object-cover" />
+              <img src={roomL.image_url} alt={`ຫ້ອງ ${roomL.room_number}`} className="w-full h-52 object-cover" />
             ) : (
-              <div className="w-full h-32 bg-white/10 flex items-center justify-center text-white/40 text-3xl">🎤</div>
+              <div className="w-full h-52 bg-white/10 flex items-center justify-center text-white/40 text-3xl">🎤</div>
             )}
-            <div className="p-3 text-left">
-              <h2 className="font-bold text-white text-sm mb-1">ຫ້ອງ {roomL.room_number} — {roomL.roomType?.name}</h2>
-              <div className="flex gap-3 text-rose-200 text-xs">
+            <div className="p-4 text-left">
+              <h2 className="font-bold text-white text-base mb-1">ຫ້ອງ {roomL.room_number} — {roomL.roomType?.name}</h2>
+              <div className="flex gap-4 text-rose-200 text-sm">
                 <span>👤 {roomL.roomType?.capacity} ທ່ານ</span>
                 <span>💲 ฿{Number(roomL.roomType?.price_per_hour).toLocaleString()}/ຊມ.</span>
               </div>
@@ -77,8 +77,8 @@ export default function HomePage() {
       </div>
 
       {/* Footer */}
-      <footer className="relative z-10 bg-[#f5f0e8] text-[#7B2438] px-6 py-4">
-        <div className="max-w-3xl mx-auto grid grid-cols-3 gap-4 text-xs mb-3">
+      <footer className="relative z-10 bg-[#f5f0e8] text-[#7B2438] px-10 py-5">
+        <div className="flex justify-between text-xs mb-3">
 
           {/* Location */}
           <div>

@@ -13,7 +13,7 @@ export default function Navbar() {
 
   return (
     <nav className="bg-[#7B2438] shadow-lg">
-      <div className="max-w-6xl mx-auto px-4 h-14 flex items-center justify-between">
+      <div className="px-6 h-14 flex items-center justify-between">
         {/* Logo */}
         <Link to="/" className="font-bold text-white text-base tracking-widest uppercase">
           LATSAVONG

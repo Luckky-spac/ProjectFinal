@@ -1,18 +1,12 @@
 const bcrypt = require('bcryptjs');
-const { User, Customer, Employee, Address, Village, District, Province, RoomType } = require('../models');
-
-const empAddressInclude = [{
-  model: Address, as: 'address', required: false,
-  include: [
-    { model: Village, as: 'village' },
-    { model: District, as: 'district' },
-    { model: Province, as: 'province' },
-  ],
-}];
+const { User, Customer, Employee, Village, District, Province, RoomType } = require('../models');
 
 const empFullInclude = [
   { model: User, as: 'user', attributes: ['u_id', 'email', 'role'] },
-  ...empAddressInclude,
+  {
+    model: Village, as: 'village', required: false,
+    include: [{ model: District, as: 'district', include: [{ model: Province, as: 'province' }] }],
+  },
 ];
 
 // ─── USERS ───────────────────────────────────────────────────────────────────
@@ -22,7 +16,6 @@ const userWithCustomer = {
   include: [{ model: Customer, as: 'customer', attributes: ['fname', 'lname', 'phone'] }],
 };
 
-// GET /api/users
 const getUsers = async (req, res) => {
   try {
     const users = await User.findAll({ ...userWithCustomer, order: [['createdAt', 'DESC']] });
@@ -32,7 +25,6 @@ const getUsers = async (req, res) => {
   }
 };
 
-// GET /api/users/:id
 const getUserById = async (req, res) => {
   try {
     const user = await User.findByPk(req.params.id, userWithCustomer);
@@ -43,7 +35,6 @@ const getUserById = async (req, res) => {
   }
 };
 
-// PUT /api/users/:id
 const updateUser = async (req, res) => {
   try {
     const user = await User.findByPk(req.params.id);
@@ -69,7 +60,6 @@ const updateUser = async (req, res) => {
   }
 };
 
-// DELETE /api/users/:id
 const deleteUser = async (req, res) => {
   try {
     const user = await User.findByPk(req.params.id);
@@ -83,20 +73,6 @@ const deleteUser = async (req, res) => {
 
 // ─── EMPLOYEES ───────────────────────────────────────────────────────────────
 
-async function saveAddress(emp, { province_id, district_id, village_id, address_detail }) {
-  if (!province_id || !district_id || !village_id) return null;
-  if (emp.add_id) {
-    await Address.update(
-      { p_id: province_id, d_id: district_id, v_id: village_id, detail: address_detail || null },
-      { where: { add_id: emp.add_id } }
-    );
-    return emp.add_id;
-  }
-  const addr = await Address.create({ p_id: province_id, d_id: district_id, v_id: village_id, detail: address_detail || null });
-  return addr.add_id;
-}
-
-// GET /api/employees
 const getEmployees = async (req, res) => {
   try {
     const employees = await Employee.findAll({
@@ -109,7 +85,6 @@ const getEmployees = async (req, res) => {
   }
 };
 
-// GET /api/employees/:id
 const getEmployeeById = async (req, res) => {
   try {
     const emp = await Employee.findByPk(req.params.id, { include: empFullInclude });
@@ -120,11 +95,19 @@ const getEmployeeById = async (req, res) => {
   }
 };
 
-// POST /api/employees  — ສ້າງ users ກ່ອນ, ຈາກນັ້ນ employees
+async function resolveVillageId(village_name, district_id) {
+  if (!village_name || !district_id) return null;
+  const [village] = await Village.findOrCreate({
+    where: { name: village_name.trim(), d_id: district_id },
+    defaults: { name: village_name.trim(), d_id: district_id },
+  });
+  return village.v_id;
+}
+
 const createEmployee = async (req, res) => {
   try {
-    const { name, email, password, phone, gender, birthday, position, role, status, hire_date, province_id, district_id, village_id, address_detail } = req.body;
-    if (!name || !email || !password || !position) {
+    const { fname, lname, email, password, phone, gender, birthday, position, role, status, hire_date, village_name, district_id } = req.body;
+    if (!fname || !email || !password || !position) {
       return res.status(400).json({ message: 'ຊື່, ອີເມລ, ລະຫັດຜ່ານ ແລະ ຕຳແໜ່ງ ຈຳເປັນຕ້ອງກອກ' });
     }
     if (phone && phone.replace(/\D/g, '').length < 10) {
@@ -138,19 +121,20 @@ const createEmployee = async (req, res) => {
     const hashed = await bcrypt.hash(password, 10);
     const user = await User.create({ email, password: hashed, role: empRole });
 
+    const v_id = await resolveVillageId(village_name, district_id);
+
     const emp = await Employee.create({
       u_id: user.u_id,
-      name,
+      fname,
+      lname: lname || null,
       phone,
       gender: gender || null,
       birthday: birthday || null,
       position,
       status: status || 'active',
       hire_date: hire_date || null,
+      v_id,
     });
-
-    const add_id = await saveAddress(emp, { province_id, district_id, village_id, address_detail });
-    if (add_id) await emp.update({ add_id });
 
     const full = await Employee.findByPk(emp.emp_id, { include: empFullInclude });
     res.status(201).json(full);
@@ -162,33 +146,32 @@ const createEmployee = async (req, res) => {
   }
 };
 
-// PUT /api/employees/:id  — ອັບເດດ users + employees
 const updateEmployee = async (req, res) => {
   try {
     const emp = await Employee.findByPk(req.params.id);
     if (!emp) return res.status(404).json({ message: 'ບໍ່ພົບພະນັກງານນີ້' });
     const user = await User.findByPk(emp.u_id);
 
-    const { name, email, phone, gender, birthday, position, role, status, hire_date, password, province_id, district_id, village_id, address_detail } = req.body;
+    const { fname, lname, email, phone, gender, birthday, position, role, status, hire_date, password, village_name, district_id } = req.body;
 
-    // Update users table
     const userUpdates = {};
     if (email) userUpdates.email = email;
     if (role && ['admin', 'staff'].includes(role)) userUpdates.role = role;
     if (password) userUpdates.password = await bcrypt.hash(password, 10);
     if (Object.keys(userUpdates).length > 0) await user.update(userUpdates);
 
-    // Update employees table
     const empUpdates = {};
-    if (name) empUpdates.name = name;
+    if (fname) empUpdates.fname = fname;
+    if (lname !== undefined) empUpdates.lname = lname || null;
     if (phone !== undefined) empUpdates.phone = phone;
     if (gender !== undefined) empUpdates.gender = gender || null;
     if (birthday !== undefined) empUpdates.birthday = birthday || null;
     if (position) empUpdates.position = position;
     if (status) empUpdates.status = status;
     if (hire_date !== undefined) empUpdates.hire_date = hire_date;
-    const add_id = await saveAddress(emp, { province_id, district_id, village_id, address_detail });
-    if (add_id) empUpdates.add_id = add_id;
+    if (village_name !== undefined) {
+      empUpdates.v_id = await resolveVillageId(village_name, district_id || emp.v_id && (await Village.findByPk(emp.v_id))?.d_id);
+    }
     if (Object.keys(empUpdates).length > 0) await emp.update(empUpdates);
 
     const full = await Employee.findByPk(emp.emp_id, { include: empFullInclude });
@@ -198,7 +181,6 @@ const updateEmployee = async (req, res) => {
   }
 };
 
-// DELETE /api/employees/:id  — ລົບ users (CASCADE ລົບ employees ອັດຕະໂນມັດ)
 const deleteEmployee = async (req, res) => {
   try {
     const emp = await Employee.findByPk(req.params.id);
@@ -217,7 +199,6 @@ const deleteEmployee = async (req, res) => {
 
 // ─── ROOM TYPES (CRUD) ────────────────────────────────────────────────────────
 
-// POST /api/room-types
 const createRoomType = async (req, res) => {
   try {
     const { name, description, capacity, price_per_hour } = req.body;
@@ -231,7 +212,6 @@ const createRoomType = async (req, res) => {
   }
 };
 
-// PUT /api/room-types/:id
 const updateRoomType = async (req, res) => {
   try {
     const rt = await RoomType.findByPk(req.params.id);
@@ -244,7 +224,6 @@ const updateRoomType = async (req, res) => {
   }
 };
 
-// DELETE /api/room-types/:id
 const deleteRoomType = async (req, res) => {
   try {
     const rt = await RoomType.findByPk(req.params.id);

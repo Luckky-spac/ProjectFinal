@@ -1,5 +1,5 @@
 const { Op } = require('sequelize');
-const { Booking, Room, RoomType, Payment, User, Customer, RoomTransfer } = require('../models');
+const { Booking, Room, RoomType, Payment, User, Customer } = require('../models');
 
 const bookingIncludes = [
   { model: Room, as: 'room', include: [{ model: RoomType, as: 'roomType' }] },
@@ -10,7 +10,7 @@ const bookingIncludes = [
 // POST /api/bookings  (ລູກຄ້າເທົ່ານັ້ນ)
 const createBooking = async (req, res) => {
   try {
-    const { room_id, start_time, end_time, guests, note } = req.body;
+    const { room_id, start_time, end_time, guests } = req.body;
     const u_id = req.user.id;
 
     if (!room_id || !start_time || !end_time) {
@@ -54,7 +54,6 @@ const createBooking = async (req, res) => {
       guests: guests || 1,
       total_price,
       status: 'pending',
-      note: note || null,
     });
 
     const full = await Booking.findByPk(booking.b_id, { include: bookingIncludes });
@@ -92,47 +91,6 @@ const getBookingById = async (req, res) => {
   }
 };
 
-// PATCH /api/bookings/:id/deposit  (ລູກຄ້າ upload slip ມັດຈຳ)
-const uploadDeposit = async (req, res) => {
-  try {
-    const booking = await Booking.findByPk(req.params.id);
-    if (!booking) return res.status(404).json({ message: 'ບໍ່ພົບການຈອງນີ້' });
-    if (booking.u_id !== req.user.id) {
-      return res.status(403).json({ message: 'ບໍ່ມີສິດເຂົ້າເຖິງຂໍ້ມູນນີ້' });
-    }
-    if (booking.status !== 'pending') {
-      return res.status(400).json({ message: 'ບໍ່ສາມາດ upload slip ໃນສະຖານະນີ້' });
-    }
-    if (!req.file) return res.status(400).json({ message: 'ກະລຸນາເລືອກໄຟລ slip' });
-
-    const deposit_amount = parseFloat(req.body.deposit_amount);
-    if (!deposit_amount || deposit_amount <= 0) {
-      return res.status(400).json({ message: 'ກະລຸນາລະບຸຈຳນວນເງິນມັດຈຳ' });
-    }
-    if (deposit_amount > parseFloat(booking.total_price)) {
-      return res.status(400).json({ message: 'ຈຳນວນເງິນມັດຈຳຫຼາຍກວ່າລາຄາລວມ' });
-    }
-
-    const slip_url = `/uploads/${req.file.filename}`;
-
-    await booking.update({ deposit_amount, deposit_slip: slip_url });
-
-    await Payment.create({
-      b_id: booking.b_id,
-      amount: deposit_amount,
-      type: 'deposit',
-      method: req.body.method || 'transfer',
-      slip_url,
-      status: 'pending',
-    });
-
-    const full = await Booking.findByPk(booking.b_id, { include: bookingIncludes });
-    res.json(full);
-  } catch (err) {
-    res.status(500).json({ message: err.message });
-  }
-};
-
 // PATCH /api/bookings/:id/status  (ພະນັກງານປ່ຽນສະຖານະ)
 const updateStatus = async (req, res) => {
   try {
@@ -146,13 +104,6 @@ const updateStatus = async (req, res) => {
     if (!booking) return res.status(404).json({ message: 'ບໍ່ພົບການຈອງນີ້' });
 
     const updates = { status };
-    if (status === 'confirmed') {
-      updates.confirmed_by = req.user.id;
-      await Payment.update(
-        { status: 'confirmed', confirmed_by: req.user.id, confirmed_at: new Date() },
-        { where: { b_id: booking.b_id, type: 'deposit', status: 'pending' } }
-      );
-    }
     if (status === 'checked_in') updates.actual_check_in = new Date();
     if (status === 'completed') updates.actual_check_out = new Date();
 
@@ -307,7 +258,7 @@ const transferRoom = async (req, res) => {
       return res.status(400).json({ message: 'ບໍ່ສາມາດຍ້າຍຫ້ອງໃນສະຖານະນີ້' });
     }
 
-    const { to_room_id, reason } = req.body;
+    const { to_room_id } = req.body;
     if (!to_room_id) return res.status(400).json({ message: 'ກະລຸນາເລືອກຫ້ອງໃໝ່' });
     if (to_room_id === booking.r_id) {
       return res.status(400).json({ message: 'ຫ້ອງໃໝ່ຕ້ອງແຕກຕ່າງຈາກຫ້ອງເດີມ' });
@@ -333,14 +284,6 @@ const transferRoom = async (req, res) => {
 
     const fromRoomId = booking.r_id;
 
-    await RoomTransfer.create({
-      b_id: booking.b_id,
-      from_r_id: fromRoomId,
-      to_r_id: to_room_id,
-      reason: reason || null,
-      transferred_by: req.user.id,
-    });
-
     if (booking.status === 'checked_in') {
       await Room.update({ status: 'available' }, { where: { r_id: fromRoomId } });
       await Room.update({ status: 'occupied' }, { where: { r_id: to_room_id } });
@@ -358,7 +301,6 @@ module.exports = {
   createBooking,
   getMyBookings,
   getBookingById,
-  uploadDeposit,
   updateStatus,
   getAllBookings,
   checkin,

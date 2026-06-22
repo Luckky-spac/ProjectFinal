@@ -118,7 +118,7 @@ function UsersTab() {
 }
 
 // ─── Employees Tab ───────────────────────────────────────────────────────────
-const EMPTY_EMP = { name: '', email: '', password: '', phone: '', gender: '', birthday: '', position: '', role: 'staff', status: 'active', hire_date: '', province_id: '', district_id: '', village_id: '', address_detail: '' };
+const EMPTY_EMP = { fname: '', lname: '', email: '', password: '', phone: '', gender: '', birthday: '', position: '', role: 'staff', status: 'active', hire_date: '', province_id: '', district_id: '', village_name: '' };
 
 function EmployeesTab() {
   const [employees, setEmployees] = useState([]);
@@ -128,7 +128,6 @@ function EmployeesTab() {
   const [loading, setLoading] = useState(false);
   const [provinces, setProvinces] = useState([]);
   const [districts, setDistricts] = useState([]);
-  const [villages, setVillages] = useState([]);
 
   const load = useCallback(() => {
     api.get('/employees').then((r) => setEmployees(r.data)).catch(() => {});
@@ -139,32 +138,31 @@ function EmployeesTab() {
   const onChange = async (e) => {
     const { name, value } = e.target;
     if (name === 'province_id') {
-      setForm((f) => ({ ...f, province_id: value, district_id: '', village_id: '' }));
-      setDistricts([]); setVillages([]);
+      setForm((f) => ({ ...f, province_id: value, district_id: '', village_name: '' }));
+      setDistricts([]);
       if (value) { const r = await api.get(`/districts?province_id=${value}`); setDistricts(r.data); }
     } else if (name === 'district_id') {
-      setForm((f) => ({ ...f, district_id: value, village_id: '' }));
-      setVillages([]);
-      if (value) { const r = await api.get(`/villages?district_id=${value}`); setVillages(r.data); }
+      setForm((f) => ({ ...f, district_id: value, village_name: '' }));
     } else {
       setForm((f) => ({ ...f, [name]: value }));
     }
   };
 
-  const startAdd = () => { setAdding(true); setEditing(null); setForm(EMPTY_EMP); setDistricts([]); setVillages([]); };
+  const startAdd = () => { setAdding(true); setEditing(null); setForm(EMPTY_EMP); setDistricts([]); };
   const startEdit = async (e) => {
     setEditing(e.emp_id); setAdding(false);
+    const provinceId = String(e.village?.district?.province?.p_id || '');
+    const districtId = String(e.village?.district?.d_id || '');
     setForm({
-      name: e.name, email: e.user?.email || '', password: '', phone: e.phone || '',
+      fname: e.fname || '', lname: e.lname || '',
+      email: e.user?.email || '', password: '', phone: e.phone || '',
       gender: e.gender || '', birthday: e.birthday || '',
       position: e.position, role: e.user?.role || 'staff', status: e.status, hire_date: e.hire_date || '',
-      province_id: String(e.address?.p_id || ''),
-      district_id: String(e.address?.d_id || ''),
-      village_id: String(e.address?.v_id || ''),
-      address_detail: e.address?.detail || '',
+      province_id: provinceId,
+      district_id: districtId,
+      village_name: e.village?.name || '',
     });
-    if (e.address?.p_id) { const r = await api.get(`/districts?province_id=${e.address.p_id}`); setDistricts(r.data); }
-    if (e.address?.d_id) { const r = await api.get(`/villages?district_id=${e.address.d_id}`); setVillages(r.data); }
+    if (provinceId) { const r = await api.get(`/districts?province_id=${provinceId}`); setDistricts(r.data); }
   };
 
   const save = async () => {
@@ -195,7 +193,8 @@ function EmployeesTab() {
       {(adding || editing) && (
         <div className="bg-gray-50 rounded-xl p-4 mb-4">
           <div className="grid grid-cols-2 gap-2 mb-3">
-            <Field label="ຊື່" name="name" value={form.name} onChange={onChange} required />
+            <Field label="ຊື່ *" name="fname" value={form.fname} onChange={onChange} required />
+            <Field label="ນາມສະກຸນ" name="lname" value={form.lname} onChange={onChange} />
             <Field label="ອີເມລ" name="email" type="email" value={form.email} onChange={onChange} required={adding} />
             <Field label={adding ? 'ລະຫັດຜ່ານ *' : 'ລະຫັດຜ່ານໃໝ່ (ບໍ່ບັງຄັບ)'} name="password" type="password" value={form.password} onChange={onChange} />
             <Field label="ໂທ" name="phone" value={form.phone} onChange={onChange}
@@ -218,10 +217,10 @@ function EmployeesTab() {
               options={[{ value: '', label: '-- ເລືອກແຂວງ --' }, ...provinces.map((p) => ({ value: String(p.p_id), label: p.name }))]} />
             <Field label="ເມືອງ" name="district_id" value={form.district_id} onChange={onChange}
               options={[{ value: '', label: form.province_id ? '-- ເລືອກເມືອງ --' : '-- ເລືອກແຂວງກ່ອນ --' }, ...districts.map((d) => ({ value: String(d.d_id), label: d.name }))]} />
-            <Field label="ບ້ານ" name="village_id" value={form.village_id} onChange={onChange}
-              options={[{ value: '', label: form.district_id ? '-- ເລືອກບ້ານ --' : '-- ເລືອກເມືອງກ່ອນ --' }, ...villages.map((v) => ({ value: String(v.v_id), label: v.name }))]} />
+            <Field label="ບ້ານ (ພິມຊື່)" name="village_name" value={form.village_name} onChange={onChange}
+              placeholder={form.district_id ? 'ຕົວຢ່າງ: ບ້ານໂນນສະຫວ່າງ' : '-- ເລືອກເມືອງກ່ອນ --'}
+              disabled={!form.district_id} />
           </div>
-          <Field label="ລາຍລະອຽດທີ່ຢູ່ (ເຮືອນເລກທີ, ຖະໜົນ...)" name="address_detail" value={form.address_detail} onChange={onChange} />
 
           <div className="flex gap-2 mt-3">
             <Btn small label={adding ? 'ເພີ່ມພະນັກງານ' : 'ບັນທຶກ'} onClick={save} disabled={loading} />
@@ -239,7 +238,7 @@ function EmployeesTab() {
           <tbody>
             {employees.map((e) => (
               <tr key={e.emp_id} className={`border-b last:border-0 ${editing === e.emp_id ? 'opacity-40' : ''}`}>
-                <td className="py-2 pr-3 font-medium">{e.name}</td>
+                <td className="py-2 pr-3 font-medium">{[e.fname, e.lname].filter(Boolean).join(' ')}</td>
                 <td className="py-2 pr-3 text-gray-500">{e.user?.email}</td>
                 <td className="py-2 pr-3 text-gray-500">{e.position}</td>
                 <td className="py-2 pr-3"><span className={`text-xs px-2 py-0.5 rounded-full font-semibold ${e.user?.role === 'admin' ? 'bg-rose-100 text-[#7B2438]' : 'bg-blue-100 text-blue-700'}`}>{e.user?.role}</span></td>

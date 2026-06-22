@@ -54,13 +54,15 @@ export default function RoomDetailPage() {
   else              { badge = 'ບໍ່ວ່າງ';    badgeCls = 'bg-red-500 text-white'; }
 
   return (
-    <div className="min-h-screen bg-green-50 pb-28">
+    <div className="relative min-h-screen pb-28">
+      <img src="/images/hero.jpeg" alt="" className="fixed inset-0 w-full h-full object-cover -z-10" />
+      <div className="fixed inset-0 bg-black/60 -z-10" />
       <div className="max-w-2xl mx-auto px-4 py-6">
 
         {/* Back */}
         <button
           onClick={() => navigate('/rooms')}
-          className="text-sm text-[#7B2438] mb-4 hover:underline flex items-center gap-1"
+          className="text-sm text-white mb-4 hover:underline flex items-center gap-1 drop-shadow"
         >
           ← ກັບໄປຫ້ອງທັງໝົດ
         </button>

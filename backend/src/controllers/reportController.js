@@ -35,7 +35,7 @@ const revenueReport = async (req, res) => {
       const [y, m] = month.split('-');
       const start = new Date(y, Number(m) - 1, 1);
       const end = new Date(y, Number(m), 0, 23, 59, 59);
-      where.confirmed_at = { [Op.between]: [start, end] };
+      where.updatedAt = { [Op.between]: [start, end] };
     }
 
     const payments = await Payment.findAll({
@@ -47,15 +47,14 @@ const revenueReport = async (req, res) => {
           include: [{ model: Room, as: 'room', include: [{ model: RoomType, as: 'roomType' }] }],
         },
       ],
-      order: [['confirmed_at', 'ASC']],
+      order: [['updatedAt', 'ASC']],
     });
 
     const totalRevenue = payments.reduce((sum, p) => sum + parseFloat(p.amount || 0), 0);
 
     const byDay = {};
     payments.forEach((p) => {
-      if (!p.confirmed_at) return;
-      const day = new Date(p.confirmed_at).toISOString().slice(0, 10);
+      const day = new Date(p.updatedAt).toISOString().slice(0, 10);
       byDay[day] = (byDay[day] || 0) + parseFloat(p.amount || 0);
     });
 

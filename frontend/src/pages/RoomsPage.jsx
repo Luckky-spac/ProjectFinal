@@ -55,7 +55,7 @@ function RoomCard({ room, onBook }) {
               : 'bg-gray-300 text-gray-400 cursor-not-allowed'
           }`}
         >
-          {isAvail ? 'ຈອງຫ້ອງນີ້' : 'ບໍ່ວ່າງ'}
+          {isAvail ? 'ເບິ່ງລາຍລະອຽດ' : 'ບໍ່ວ່າງ'}
         </button>
       </div>
     </div>
@@ -110,9 +110,11 @@ export default function RoomsPage() {
   const availCount = rooms.filter((r) => r.isAvailable).length;
 
   return (
-    <div className="min-h-screen bg-green-50">
+    <div className="relative min-h-screen">
+      <img src="/images/hero.jpeg" alt="" className="fixed inset-0 w-full h-full object-cover -z-10" />
+      <div className="fixed inset-0 bg-black/60 -z-10" />
       <div className="max-w-2xl mx-auto px-4 py-8">
-        <h1 className="text-2xl font-bold text-[#7B2438] mb-6">ຫ້ອງຄາຣາໂອເກະທັງໝົດ</h1>
+        <h1 className="text-2xl font-bold text-white mb-6 drop-shadow">ຫ້ອງຄາຣາໂອເກະທັງໝົດ</h1>
 
         {/* ─── Filter ─── */}
         <form

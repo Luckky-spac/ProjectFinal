@@ -102,11 +102,13 @@ export default function ReviewPage() {
   }
 
   return (
-    <div className="min-h-screen bg-green-50 py-8 px-4">
+    <div className="relative min-h-screen py-8 px-4">
+      <img src="/images/hero.jpeg" alt="" className="fixed inset-0 w-full h-full object-cover -z-10" />
+      <div className="fixed inset-0 bg-black/60 -z-10" />
       <div className="max-w-2xl mx-auto">
         <div className="flex items-center gap-3 mb-6">
-          <button onClick={() => navigate('/my-bookings')} className="text-[#7B2438] hover:text-rose-900 text-xl">←</button>
-          <h1 className="text-2xl font-bold text-[#7B2438]">ລີວິວ</h1>
+          <button onClick={() => navigate('/my-bookings')} className="text-white hover:text-rose-200 text-xl drop-shadow">←</button>
+          <h1 className="text-2xl font-bold text-white drop-shadow">ລີວິວ</h1>
         </div>
 
         {toast && (

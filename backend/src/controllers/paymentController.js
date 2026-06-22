@@ -6,48 +6,47 @@ const bookingIncludes = [
   { model: Payment, as: 'payments' },
 ];
 
-// POST /api/payments  (ລູກຄ້າ upload slip ຊຳລະສ່ວນທີ່ເຫຼືອ)
+// POST /api/payments
+// QR → status=confirmed อัตโนมัติ | cash → status=pending (พนักงานกดยืนยัน)
 const createPayment = async (req, res) => {
   try {
-    const { booking_id, amount, method } = req.body;
+    const { booking_id, amount, type, method } = req.body;
 
-    if (!booking_id || !amount) {
+    if (!booking_id || !amount || !type) {
       return res.status(400).json({ message: 'ກະລຸນາກອກຂໍ້ມູນໃຫ້ຄົບ' });
     }
 
     const booking = await Booking.findByPk(booking_id);
     if (!booking) return res.status(404).json({ message: 'ບໍ່ພົບການຈອງນີ້' });
-    if (booking.u_id !== req.user.id) {
-      return res.status(403).json({ message: 'ບໍ່ມີສິດເຂົ້າເຖິງຂໍ້ມູນນີ້' });
-    }
-    if (booking.status !== 'checked_in') {
-      return res.status(400).json({ message: 'ສາມາດຊຳລະເງິນໄດ້ສະເພາະເມື່ອ check-in ແລ້ວ' });
-    }
 
-    const existing = await Payment.findOne({
-      where: { b_id: booking_id, type: 'final', status: ['pending', 'confirmed'] },
-    });
-    if (existing) {
-      return res.status(400).json({ message: 'ມີລາຍການຊຳລະເງິນຢູ່ແລ້ວ ກະລຸນາລໍຖ້າພະນັກງານຢືນຢັນ' });
-    }
-    if (!req.file) return res.status(400).json({ message: 'ກະລຸນາເລືອກໄຟລ slip' });
+    const payMethod = method || 'QR';
+    const autoConfirm = payMethod === 'QR';
 
     const payment = await Payment.create({
       b_id: booking_id,
       amount: parseFloat(amount),
-      type: 'final',
-      method: method || 'transfer',
-      slip_url: `/uploads/${req.file.filename}`,
-      status: 'pending',
+      type,
+      method: payMethod,
+      status: autoConfirm ? 'confirmed' : 'pending',
     });
 
-    res.status(201).json(payment);
+    if (autoConfirm && type === 'deposit') {
+      await booking.update({ status: 'confirmed', deposit_amount: parseFloat(amount) });
+    }
+
+    if (autoConfirm && type === 'final' && ['checked_in', 'checking_out'].includes(booking.status)) {
+      await booking.update({ status: 'completed', actual_check_out: new Date() });
+      await Room.update({ status: 'available' }, { where: { r_id: booking.r_id } });
+    }
+
+    const full = await Booking.findByPk(booking_id, { include: bookingIncludes });
+    res.status(201).json({ payment, booking: full });
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
 };
 
-// PATCH /api/payments/:id/confirm  (ພະນັກງານຢືນຢັນການຊຳລະ)
+// PATCH /api/payments/:id/confirm  (ພະນັກງານຢືນຢັນ cash)
 const confirmPayment = async (req, res) => {
   try {
     const payment = await Payment.findByPk(req.params.id);
@@ -56,14 +55,13 @@ const confirmPayment = async (req, res) => {
       return res.status(400).json({ message: 'ລາຍການນີ້ຖືກດຳເນີນການແລ້ວ' });
     }
 
-    await payment.update({
-      status: 'confirmed',
-      confirmed_by: req.user.id,
-      confirmed_at: new Date(),
-    });
+    await payment.update({ status: 'confirmed' });
 
     const booking = await Booking.findByPk(payment.b_id);
-    if (['checked_in', 'checking_out'].includes(booking.status)) {
+    if (payment.type === 'deposit' && booking.status === 'pending') {
+      await booking.update({ status: 'confirmed', deposit_amount: payment.amount });
+    }
+    if (payment.type === 'final' && ['checked_in', 'checking_out'].includes(booking.status)) {
       await booking.update({ status: 'completed', actual_check_out: new Date() });
       await Room.update({ status: 'available' }, { where: { r_id: booking.r_id } });
     }
@@ -75,7 +73,7 @@ const confirmPayment = async (req, res) => {
   }
 };
 
-// PATCH /api/payments/:id/reject  (ພະນັກງານປະຕິເສດ)
+// PATCH /api/payments/:id/reject  (ພະນັກງານປະຕິເສດ cash)
 const rejectPayment = async (req, res) => {
   try {
     const payment = await Payment.findByPk(req.params.id);

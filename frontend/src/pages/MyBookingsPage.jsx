@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import api from '../api/axios';
 
@@ -20,120 +20,140 @@ function formatDateTime(iso) {
   });
 }
 
-function DepositUploadForm({ booking, onSuccess }) {
-  const [amount, setAmount] = useState('');
-  const [file, setFile] = useState(null);
-  const [uploading, setUploading] = useState(false);
-  const [error, setError] = useState('');
-  const fileRef = useRef();
-
-  const suggested = (parseFloat(booking.total_price) * 0.3).toFixed(0);
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setError('');
-    if (!file || !amount) { setError('ກະລຸນາເລືອກໄຟລ໌ ແລະ ລະບຸຈຳນວນເງິນ'); return; }
-    const fd = new FormData();
-    fd.append('slip', file);
-    fd.append('deposit_amount', amount);
-    setUploading(true);
-    try {
-      const res = await api.patch(`/bookings/${booking.b_id}/deposit`, fd);
-      onSuccess(res.data);
-    } catch (err) {
-      setError(err.response?.data?.message || 'ອັບໂຫຼດລົ້ມເຫຼວ');
-    } finally {
-      setUploading(false);
-    }
-  };
-
+// QR mock image placeholder
+function QRMock({ amount }) {
   return (
-    <form onSubmit={handleSubmit} className="mt-3 bg-yellow-50 rounded-xl p-4 flex flex-col gap-3">
-      <p className="text-sm font-semibold text-yellow-800">ອັບໂຫຼດສະລິບມັດຈຳ</p>
-      <div className="flex gap-2 items-center">
-        <input
-          type="number" min="1" placeholder={`ແນະນຳ ฿${Number(suggested).toLocaleString()} (30%)`}
-          value={amount} onChange={(e) => setAmount(e.target.value)}
-          className="border rounded-lg px-3 py-1.5 text-sm flex-1"
-        />
-        <span className="text-xs text-gray-500">ບາດ</span>
+    <div className="flex flex-col items-center bg-white border-2 border-dashed border-gray-300 rounded-xl p-4 gap-2">
+      <div className="w-32 h-32 bg-gray-100 rounded-lg flex items-center justify-center border border-gray-200">
+        <div className="text-center">
+          <div className="text-4xl">▣</div>
+          <p className="text-xs text-gray-400 mt-1">QR Code</p>
+        </div>
       </div>
-      <div className="flex gap-2 items-center">
-        <button type="button" onClick={() => fileRef.current.click()}
-          className="text-sm border border-dashed border-yellow-400 rounded-lg px-3 py-1.5 text-yellow-700 hover:bg-yellow-100">
-          {file ? file.name : 'ເລືອກໄຟລ໌ສະລິບ'}
-        </button>
-        <input ref={fileRef} type="file" accept="image/*" className="hidden"
-          onChange={(e) => setFile(e.target.files[0])} />
-      </div>
-      {error && <p className="text-red-500 text-xs">{error}</p>}
-      <button type="submit" disabled={uploading}
-        className="py-2 bg-yellow-500 text-white rounded-lg text-sm font-semibold hover:bg-yellow-600 disabled:opacity-50">
-        {uploading ? 'ກຳລັງອັບໂຫຼດ...' : 'ສົ່ງສະລິບມັດຈຳ'}
-      </button>
-    </form>
+      <p className="text-xs text-gray-500">ສະແກນ QR ເພື່ອໂອນ</p>
+      <p className="text-sm font-bold text-[#7B2438]">฿{Number(amount).toLocaleString()}</p>
+    </div>
   );
 }
 
-function FinalPaymentForm({ booking, onSuccess }) {
-  const remaining = parseFloat(booking.total_price) - parseFloat(booking.deposit_amount || 0);
-  const [file, setFile] = useState(null);
-  const [method, setMethod] = useState('transfer');
-  const [uploading, setUploading] = useState(false);
+function PaymentForm({ booking, type, onSuccess }) {
+  const isDeposit = type === 'deposit';
+  const suggested = isDeposit
+    ? Math.ceil(parseFloat(booking.total_price) * 0.3)
+    : parseFloat(booking.total_price) - parseFloat(booking.deposit_amount || 0);
+
+  const [amount, setAmount] = useState(String(suggested));
+  const [method, setMethod] = useState('QR');
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  const fileRef = useRef();
+  const [cashSent, setCashSent] = useState(false);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
-    if (!file) { setError('ກະລຸນາເລືອກໄຟລ໌ສະລິບ'); return; }
-    const fd = new FormData();
-    fd.append('slip', file);
-    fd.append('booking_id', booking.b_id);
-    fd.append('amount', remaining.toFixed(2));
-    fd.append('method', method);
-    setUploading(true);
+    if (!amount || parseFloat(amount) <= 0) { setError('ກະລຸນາລະບຸຈຳນວນເງິນ'); return; }
+    setLoading(true);
     try {
-      const res = await api.post('/payments', fd);
-      onSuccess(res.data);
+      const res = await api.post('/payments', {
+        booking_id: booking.b_id,
+        amount: parseFloat(amount),
+        type,
+        method,
+      });
+      onSuccess(res.data.booking);
     } catch (err) {
-      setError(err.response?.data?.message || 'ອັບໂຫຼດລົ້ມເຫຼວ');
+      setError(err.response?.data?.message || 'ເກີດຂໍ້ຜິດພາດ');
     } finally {
-      setUploading(false);
+      setLoading(false);
     }
   };
 
+  const handleCash = async () => {
+    setError('');
+    setLoading(true);
+    try {
+      const res = await api.post('/payments', {
+        booking_id: booking.b_id,
+        amount: parseFloat(amount),
+        type,
+        method: 'cash',
+      });
+      setCashSent(true);
+      onSuccess(res.data.booking);
+    } catch (err) {
+      setError(err.response?.data?.message || 'ເກີດຂໍ້ຜິດພາດ');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const bgColor = isDeposit ? 'bg-yellow-50' : 'bg-green-50';
+  const titleColor = isDeposit ? 'text-yellow-800' : 'text-green-800';
+  const title = isDeposit ? 'ຊຳລະມັດຈຳ' : 'ຊຳລະເງິນສ່ວນທີ່ເຫຼືອ';
+
   return (
-    <form onSubmit={handleSubmit} className="mt-3 bg-green-50 rounded-xl p-4 flex flex-col gap-3">
-      <p className="text-sm font-semibold text-green-800">ຊຳລະເງິນສ່ວນທີ່ເຫຼືອ</p>
-      <div className="flex justify-between text-sm text-gray-600">
-        <span>ລາຄາລວມ</span><span>฿{Number(booking.total_price).toLocaleString()}</span>
-      </div>
-      <div className="flex justify-between text-sm text-gray-600">
-        <span>ມັດຈຳແລ້ວ</span><span>฿{Number(booking.deposit_amount || 0).toLocaleString()}</span>
-      </div>
-      <div className="flex justify-between text-sm font-bold text-green-700 border-t pt-2">
-        <span>ຍອດທີ່ຕ້ອງຊຳລະ</span><span>฿{remaining.toLocaleString()}</span>
-      </div>
-      <select value={method} onChange={(e) => setMethod(e.target.value)}
-        className="border rounded-lg px-3 py-1.5 text-sm">
-        <option value="transfer">ໂອນເງິນ</option>
-        <option value="cash">ເງິນສົດ</option>
-      </select>
-      <div className="flex gap-2 items-center">
-        <button type="button" onClick={() => fileRef.current.click()}
-          className="text-sm border border-dashed border-green-400 rounded-lg px-3 py-1.5 text-green-700 hover:bg-green-100">
-          {file ? file.name : 'ເລືອກໄຟລ໌ສະລິບ'}
+    <div className={`mt-3 ${bgColor} rounded-xl p-4 flex flex-col gap-3`}>
+      <p className={`text-sm font-semibold ${titleColor}`}>{title}</p>
+
+      {!isDeposit && (
+        <div className="text-sm text-gray-600 flex flex-col gap-1">
+          <div className="flex justify-between"><span>ລາຄາລວມ</span><span>฿{Number(booking.total_price).toLocaleString()}</span></div>
+          <div className="flex justify-between"><span>ມັດຈຳແລ້ວ</span><span>฿{Number(booking.deposit_amount || 0).toLocaleString()}</span></div>
+          <div className="flex justify-between font-bold border-t pt-1"><span>ຍອດທີ່ຕ້ອງຊຳລະ</span><span>฿{Number(suggested).toLocaleString()}</span></div>
+        </div>
+      )}
+
+      {isDeposit && (
+        <div className="flex gap-2 items-center">
+          <input
+            type="number" min="1" value={amount}
+            onChange={(e) => setAmount(e.target.value)}
+            placeholder={`ແນະນຳ ฿${Number(suggested).toLocaleString()} (30%)`}
+            className="border rounded-lg px-3 py-1.5 text-sm flex-1"
+          />
+          <span className="text-xs text-gray-500">ບາດ</span>
+        </div>
+      )}
+
+      {/* Method selector */}
+      <div className="flex gap-2">
+        <button type="button" onClick={() => setMethod('QR')}
+          className={`flex-1 py-1.5 rounded-lg text-sm font-semibold border transition ${method === 'QR' ? 'bg-[#7B2438] text-white border-[#7B2438]' : 'bg-white text-gray-600 border-gray-300'}`}>
+          QR Code
         </button>
-        <input ref={fileRef} type="file" accept="image/*" className="hidden"
-          onChange={(e) => setFile(e.target.files[0])} />
+        <button type="button" onClick={() => setMethod('cash')}
+          className={`flex-1 py-1.5 rounded-lg text-sm font-semibold border transition ${method === 'cash' ? 'bg-[#7B2438] text-white border-[#7B2438]' : 'bg-white text-gray-600 border-gray-300'}`}>
+          ເງິນສົດ
+        </button>
       </div>
-      {error && <p className="text-red-500 text-xs">{error}</p>}
-      <button type="submit" disabled={uploading}
-        className="py-2 bg-green-600 text-white rounded-lg text-sm font-semibold hover:bg-green-700 disabled:opacity-50">
-        {uploading ? 'ກຳລັງອັບໂຫຼດ...' : 'ສົ່ງສະລິບຊຳລະເງິນ'}
-      </button>
-    </form>
+
+      {method === 'QR' && (
+        <form onSubmit={handleSubmit} className="flex flex-col gap-3">
+          <QRMock amount={isDeposit ? amount : suggested} />
+          <p className="text-xs text-gray-500 text-center">ສະແກນ QR ຂ້າງເທິງ ຈາກນັ້ນກົດປຸ່ມຢືນຢັນ</p>
+          {error && <p className="text-red-500 text-xs">{error}</p>}
+          <button type="submit" disabled={loading}
+            className="py-2 bg-[#7B2438] text-white rounded-lg text-sm font-semibold hover:bg-rose-900 disabled:opacity-50">
+            {loading ? 'ກຳລັງດຳເນີນການ...' : 'ຢືນຢັນການຊຳລະ QR'}
+          </button>
+        </form>
+      )}
+
+      {method === 'cash' && (
+        <div className="flex flex-col gap-2">
+          <p className="text-xs text-gray-600 bg-white rounded-lg px-3 py-2 border border-gray-200">
+            ກະລຸນາຊຳລະເງິນສົດໃຫ້ພະນັກງານ ຈຳນວນ <strong>฿{Number(isDeposit ? amount : suggested).toLocaleString()}</strong> ບາດ
+          </p>
+          {error && <p className="text-red-500 text-xs">{error}</p>}
+          {!cashSent && (
+            <button type="button" onClick={handleCash} disabled={loading}
+              className="py-2 bg-gray-600 text-white rounded-lg text-sm font-semibold hover:bg-gray-700 disabled:opacity-50">
+              {loading ? 'ກຳລັງດຳເນີນການ...' : 'ແຈ້ງຊຳລະເງິນສົດ'}
+            </button>
+          )}
+        </div>
+      )}
+    </div>
   );
 }
 
@@ -190,7 +210,7 @@ function ExtendForm({ booking, onSuccess }) {
     <form onSubmit={handleSubmit} className="mt-3 bg-blue-50 rounded-xl p-4 flex flex-col gap-3">
       <p className="text-sm font-semibold text-blue-800">ຕໍ່ເວລາ</p>
       <div className="flex gap-2 items-center">
-        <label className="text-sm text-gray-600">ຈຳນວນຊົ່ວໂມງທີ່ຕ້ອງການຕໍ່</label>
+        <label className="text-sm text-gray-600">ຈຳນວນຊົ່ວໂມງ</label>
         <input type="number" min="1" max="12" value={hours} onChange={(e) => setHours(Number(e.target.value))}
           className="border rounded-lg px-3 py-1.5 text-sm w-20 text-center" />
         <span className="text-sm text-gray-500">ຊມ.</span>
@@ -207,9 +227,12 @@ function ExtendForm({ booking, onSuccess }) {
 function BookingCard({ booking, isNew, onUpdate }) {
   const cfg = STATUS_CONFIG[booking.status] || { text: booking.status, cls: 'bg-gray-100 text-gray-500' };
   const hours = ((new Date(booking.end_time) - new Date(booking.start_time)) / 3600000).toFixed(1);
-  const hasDepositSlip = !!booking.deposit_slip;
+
+  const hasPendingDeposit = booking.payments?.some((p) => p.type === 'deposit' && p.status === 'pending');
+  const hasConfirmedDeposit = booking.payments?.some((p) => p.type === 'deposit' && p.status === 'confirmed');
   const hasPendingFinalPayment = booking.payments?.some((p) => p.type === 'final' && p.status === 'pending');
   const hasConfirmedFinalPayment = booking.payments?.some((p) => p.type === 'final' && p.status === 'confirmed');
+
   const [showDeposit, setShowDeposit] = useState(false);
   const [showPayment, setShowPayment] = useState(false);
   const [showExtend, setShowExtend] = useState(false);
@@ -270,28 +293,27 @@ function BookingCard({ booking, isNew, onUpdate }) {
         <span className="font-bold text-[#7B2438] text-base">฿{Number(booking.total_price).toLocaleString()}</span>
       </div>
 
-      {booking.note && (
-        <p className="text-xs text-gray-400 bg-gray-50 rounded-lg px-3 py-2">{booking.note}</p>
-      )}
-
-      {booking.status === 'pending' && !hasDepositSlip && (
+      {/* pending — ຈ່າຍມັດຈຳ */}
+      {booking.status === 'pending' && !hasConfirmedDeposit && !hasPendingDeposit && (
         <>
           <button onClick={() => setShowDeposit((v) => !v)}
             className="text-sm py-2 bg-yellow-500 text-white rounded-xl font-semibold hover:bg-yellow-600">
-            {showDeposit ? 'ຊ່ອນ' : 'ອັບໂຫຼດສະລິບມັດຈຳ'}
+            {showDeposit ? 'ຊ່ອນ' : 'ຊຳລະມັດຈຳ'}
           </button>
           {showDeposit && (
-            <DepositUploadForm booking={booking} onSuccess={(updated) => { onUpdate(updated); setShowDeposit(false); }} />
+            <PaymentForm booking={booking} type="deposit"
+              onSuccess={(updated) => { onUpdate(updated); setShowDeposit(false); }} />
           )}
         </>
       )}
 
-      {booking.status === 'pending' && hasDepositSlip && (
+      {booking.status === 'pending' && hasPendingDeposit && (
         <div className="text-xs text-yellow-700 bg-yellow-50 rounded-lg px-3 py-2">
-          ສົ່ງສະລິບມັດຈຳແລ້ວ — ລໍພະນັກງານຢືນຢັນ
+          ແຈ້ງຊຳລະເງິນສົດແລ້ວ — ລໍພະນັກງານຢືນຢັນ
         </div>
       )}
 
+      {/* confirmed — check-in */}
       {booking.status === 'confirmed' && (
         <button onClick={doCheckin} disabled={actionLoading}
           className="text-sm py-2 bg-blue-600 text-white rounded-xl font-semibold hover:bg-blue-700 disabled:opacity-50">
@@ -305,6 +327,7 @@ function BookingCard({ booking, isNew, onUpdate }) {
         </div>
       )}
 
+      {/* checked_in — ຊຳລະສ່ວນທີ່ເຫຼືອ + ຕໍ່ເວລາ + check-out */}
       {booking.status === 'checked_in' && (
         <>
           {!hasPendingFinalPayment && !hasConfirmedFinalPayment && (
@@ -314,13 +337,14 @@ function BookingCard({ booking, isNew, onUpdate }) {
                 {showPayment ? 'ຊ່ອນ' : 'ຊຳລະເງິນສ່ວນທີ່ເຫຼືອ'}
               </button>
               {showPayment && (
-                <FinalPaymentForm booking={booking} onSuccess={() => { onUpdate({ ...booking, payments: [...(booking.payments || []), { type: 'final', status: 'pending' }] }); setShowPayment(false); }} />
+                <PaymentForm booking={booking} type="final"
+                  onSuccess={(updated) => { onUpdate(updated); setShowPayment(false); }} />
               )}
             </>
           )}
           {hasPendingFinalPayment && (
             <div className="text-xs text-green-700 bg-green-50 rounded-lg px-3 py-2">
-              ສົ່ງສະລິບຊຳລະເງິນແລ້ວ — ລໍພະນັກງານຢືນຢັນ
+              ແຈ້ງຊຳລະເງິນສົດແລ້ວ — ລໍພະນັກງານຢືນຢັນ
             </div>
           )}
           <button onClick={() => setShowExtend((v) => !v)}
@@ -363,15 +387,18 @@ export default function MyBookingsPage() {
   }, []);
 
   const handleUpdate = (updated) => {
+    if (!updated) return;
     setBookings((prev) => prev.map((b) => (b.b_id === updated.b_id ? updated : b)));
   };
 
   return (
-    <div className="min-h-screen bg-green-50 py-8 px-4">
+    <div className="relative min-h-screen py-8 px-4">
+      <img src="/images/hero.jpeg" alt="" className="fixed inset-0 w-full h-full object-cover -z-10" />
+      <div className="fixed inset-0 bg-black/60 -z-10" />
       <div className="max-w-2xl mx-auto">
         <div className="flex items-center justify-between mb-6">
-          <h1 className="text-2xl font-bold text-[#7B2438]">ການຈອງຂອງຂ້ອຍ</h1>
-          <button onClick={() => navigate('/rooms')} className="text-sm text-[#7B2438] hover:underline font-semibold">
+          <h1 className="text-2xl font-bold text-white drop-shadow">ການຈອງຂອງຂ້ອຍ</h1>
+          <button onClick={() => navigate('/rooms')} className="text-sm text-white hover:underline font-semibold drop-shadow">
             + ຈອງຫ້ອງໃໝ່
           </button>
         </div>

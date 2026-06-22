@@ -4,6 +4,10 @@
   box-sizing: border-box;
 }
 
+html {
+  zoom: 1.15;
+}
+
 body {
   margin: 0;
   font-family: 'Phetsarath', system-ui, 'Segoe UI', Roboto, sans-serif;

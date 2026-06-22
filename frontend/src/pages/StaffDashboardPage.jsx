@@ -38,6 +38,7 @@ function ActionButton({ label, color, onClick, disabled }) {
     green: 'bg-green-600 hover:bg-green-700 text-white',
     red: 'bg-red-500 hover:bg-red-600 text-white',
     purple: 'bg-[#7B2438] hover:bg-rose-900 text-white',
+    gray: 'bg-gray-500 hover:bg-gray-600 text-white',
   };
   return (
     <button
@@ -53,19 +54,20 @@ function ActionButton({ label, color, onClick, disabled }) {
 function RoomTransferForm({ booking, onSuccess, onCancel }) {
   const [rooms, setRooms] = useState([]);
   const [toRoomId, setToRoomId] = useState('');
-  const [reason, setReason] = useState('');
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    api.get('/rooms').then((r) => setRooms(r.data.filter((rm) => rm.isAvailable && rm.r_id !== booking.r_id))).catch(() => {});
-  }, [booking.room_id]);
+    api.get('/rooms').then((r) =>
+      setRooms(r.data.filter((rm) => rm.status === 'available' && rm.r_id !== booking.r_id))
+    ).catch(() => {});
+  }, [booking.r_id]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!toRoomId) return;
     setLoading(true);
     try {
-      const res = await api.patch(`/bookings/${booking.b_id}/transfer`, { to_room_id: Number(toRoomId), reason });
+      const res = await api.patch(`/bookings/${booking.b_id}/transfer`, { to_room_id: Number(toRoomId) });
       onSuccess(res.data);
     } catch (err) {
       alert(err.response?.data?.message || 'ເກີດຂໍ້ຜິດພາດ');
@@ -79,11 +81,9 @@ function RoomTransferForm({ booking, onSuccess, onCancel }) {
       <p className="text-sm font-semibold text-[#7B2438]">ຍ້າຍຫ້ອງ</p>
       <select value={toRoomId} onChange={(e) => setToRoomId(e.target.value)} required
         className="border rounded-lg px-3 py-2 text-sm">
-        <option value="">-- ເລືອກຫ້ອງໃໝ່ --</option>
+        <option value="">-- ເລືອກຫ້ອງໃໝ່ (ວ່າງ) --</option>
         {rooms.map((r) => <option key={r.r_id} value={r.r_id}>ຫ້ອງ {r.room_number} — {r.roomType?.name}</option>)}
       </select>
-      <input placeholder="ເຫດຜົນ (ບໍ່ບັງຄັບ)" value={reason} onChange={(e) => setReason(e.target.value)}
-        className="border rounded-lg px-3 py-2 text-sm" />
       <div className="flex gap-2">
         <button type="submit" disabled={loading || !toRoomId}
           className="text-xs px-3 py-1.5 bg-[#7B2438] text-white rounded-lg font-semibold disabled:opacity-40">
@@ -104,7 +104,7 @@ function BookingRow({ booking, onUpdate }) {
   const [expanded, setExpanded] = useState(false);
   const [showTransfer, setShowTransfer] = useState(false);
 
-  const hasDepositSlip = !!booking.deposit_slip;
+  const pendingDepositPayment = booking.payments?.find((p) => p.type === 'deposit' && p.status === 'pending');
   const pendingFinalPayment = booking.payments?.find((p) => p.type === 'final' && p.status === 'pending');
 
   const changeStatus = async (status) => {
@@ -143,11 +143,10 @@ function BookingRow({ booking, onUpdate }) {
     }
   };
 
-  const confirmFinalPayment = async () => {
-    if (!pendingFinalPayment) return;
+  const confirmPayment = async (payId) => {
     setLoading(true);
     try {
-      const res = await api.patch(`/payments/${pendingFinalPayment.pay_id}/confirm`);
+      const res = await api.patch(`/payments/${payId}/confirm`);
       onUpdate(res.data.booking);
     } catch (err) {
       alert(err.response?.data?.message || 'ເກີດຂໍ້ຜິດພາດ');
@@ -156,12 +155,11 @@ function BookingRow({ booking, onUpdate }) {
     }
   };
 
-  const rejectFinalPayment = async () => {
-    if (!pendingFinalPayment) return;
+  const rejectPayment = async (payId, booking) => {
     setLoading(true);
     try {
-      await api.patch(`/payments/${pendingFinalPayment.pay_id}/reject`);
-      onUpdate({ ...booking, payments: booking.payments.map((p) => p.pay_id === pendingFinalPayment.pay_id ? { ...p, status: 'rejected' } : p) });
+      await api.patch(`/payments/${payId}/reject`);
+      onUpdate({ ...booking, payments: booking.payments.map((p) => p.pay_id === payId ? { ...p, status: 'rejected' } : p) });
     } catch (err) {
       alert(err.response?.data?.message || 'ເກີດຂໍ້ຜິດພາດ');
     } finally {
@@ -181,14 +179,14 @@ function BookingRow({ booking, onUpdate }) {
             <span className="font-semibold text-sm">ຫ້ອງ {booking.room?.room_number}</span>
             <span className="text-xs text-gray-400">{booking.room?.roomType?.name}</span>
             <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${cfg.cls}`}>{cfg.text}</span>
-            {hasDepositSlip && booking.status === 'pending' && (
-              <span className="text-xs bg-orange-100 text-orange-600 px-2 py-0.5 rounded-full font-semibold">
-                ມີສະລິບມັດຈຳ
+            {pendingDepositPayment && (
+              <span className="text-xs bg-yellow-100 text-yellow-700 px-2 py-0.5 rounded-full font-semibold">
+                ລໍຢືນຢັນ cash ມັດຈຳ
               </span>
             )}
             {pendingFinalPayment && (
-              <span className="text-xs bg-green-100 text-green-600 px-2 py-0.5 rounded-full font-semibold">
-                ມີສະລິບຊຳລະເງິນ
+              <span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full font-semibold">
+                ລໍຢືນຢັນ cash ຊຳລະ
               </span>
             )}
           </div>
@@ -212,62 +210,78 @@ function BookingRow({ booking, onUpdate }) {
             <div><span className="text-gray-400">ມັດຈຳ: </span>฿{Number(booking.deposit_amount || 0).toLocaleString()}</div>
           </div>
 
-          {booking.note && (
-            <p className="text-xs text-gray-500 bg-white rounded-lg px-3 py-2">{booking.note}</p>
-          )}
-
-          {/* Slip images */}
-          {booking.deposit_slip && (
-            <div>
-              <p className="text-xs text-gray-400 mb-1">ສະລິບມັດຈຳ</p>
-              <a href={booking.deposit_slip} target="_blank" rel="noreferrer">
-                <img src={booking.deposit_slip} alt="deposit slip" className="h-28 rounded-lg object-cover border" />
-              </a>
-            </div>
-          )}
-          {pendingFinalPayment?.slip_url && (
-            <div>
-              <p className="text-xs text-gray-400 mb-1">ສະລິບຊຳລະເງິນສ່ວນທີ່ເຫຼືອ</p>
-              <a href={pendingFinalPayment.slip_url} target="_blank" rel="noreferrer">
-                <img src={pendingFinalPayment.slip_url} alt="final slip" className="h-28 rounded-lg object-cover border" />
-              </a>
+          {/* Payment info */}
+          {booking.payments?.length > 0 && (
+            <div className="text-xs text-gray-500 flex flex-col gap-1">
+              {booking.payments.map((p) => (
+                <div key={p.pay_id} className="flex justify-between bg-white rounded-lg px-3 py-1.5 border">
+                  <span>{p.type === 'deposit' ? 'ມັດຈຳ' : 'ຊຳລະສ່ວນທີ່ເຫຼືອ'} ({p.method})</span>
+                  <span className={p.status === 'confirmed' ? 'text-green-600 font-semibold' : p.status === 'rejected' ? 'text-red-500' : 'text-yellow-600'}>
+                    ฿{Number(p.amount).toLocaleString()} — {p.status === 'confirmed' ? 'ຢືນຢັນ' : p.status === 'rejected' ? 'ປະຕິເສດ' : 'ລໍຢືນຢັນ'}
+                  </span>
+                </div>
+              ))}
             </div>
           )}
 
           {/* Action buttons */}
           <div className="flex gap-2 flex-wrap">
-            {booking.status === 'pending' && hasDepositSlip && (
-              <ActionButton label="ຢືນຢັນມັດຈຳ" color="blue" disabled={loading} onClick={() => changeStatus('confirmed')} />
+            {/* ຢືນຢັນ cash ມັດຈຳ */}
+            {pendingDepositPayment && (
+              <>
+                <ActionButton label="ຢືນຢັນ cash ມັດຈຳ" color="blue" disabled={loading}
+                  onClick={() => confirmPayment(pendingDepositPayment.pay_id)} />
+                <ActionButton label="ປະຕິເສດ" color="red" disabled={loading}
+                  onClick={() => rejectPayment(pendingDepositPayment.pay_id, booking)} />
+              </>
             )}
+
+            {/* check-in */}
             {booking.status === 'checking_in' && (
               <ActionButton label="ຢືນຢັນ Check-in" color="green" disabled={loading} onClick={confirmCheckin} />
             )}
             {booking.status === 'confirmed' && (
               <ActionButton label="Check-in (ພະນັກງານ)" color="green" disabled={loading} onClick={confirmCheckin} />
             )}
+
+            {/* check-out */}
             {booking.status === 'checking_out' && (
               <ActionButton label="ຢືນຢັນ Check-out" color="purple" disabled={loading} onClick={confirmCheckout} />
             )}
             {booking.status === 'checked_in' && (
               <ActionButton label="Check-out (ພະນັກງານ)" color="purple" disabled={loading} onClick={confirmCheckout} />
             )}
-            {['checked_in', 'checking_out', 'completed'].includes(booking.status) && pendingFinalPayment && (
+
+            {/* ຢືນຢັນ cash ຊຳລະສ່ວນທີ່ເຫຼືອ */}
+            {pendingFinalPayment && (
               <>
-                <ActionButton label="ຢືນຢັນຊຳລະເງິນ" color="purple" disabled={loading} onClick={confirmFinalPayment} />
-                <ActionButton label="ປະຕິເສດສະລິບ" color="red" disabled={loading} onClick={rejectFinalPayment} />
+                <ActionButton label="ຢືນຢັນ cash ຊຳລະ" color="purple" disabled={loading}
+                  onClick={() => confirmPayment(pendingFinalPayment.pay_id)} />
+                <ActionButton label="ປະຕິເສດ" color="red" disabled={loading}
+                  onClick={() => rejectPayment(pendingFinalPayment.pay_id, booking)} />
               </>
             )}
+
+            {/* ຍ້າຍຫ້ອງ */}
             {['confirmed', 'checked_in', 'checking_in', 'checking_out'].includes(booking.status) && (
-              <ActionButton label="ຍ້າຍຫ້ອງ" color="blue" disabled={loading} onClick={() => setShowTransfer((v) => !v)} />
+              <ActionButton label="ຍ້າຍຫ້ອງ" color="gray" disabled={loading}
+                onClick={() => setShowTransfer((v) => !v)} />
             )}
+
+            {/* ຍົກເລີກ */}
             {['pending', 'confirmed'].includes(booking.status) && (
               <ActionButton label="ຍົກເລີກການຈອງ" color="red" disabled={loading} onClick={() => {
                 if (window.confirm('ຢືນຢັນຍົກເລີກການຈອງນີ້?')) changeStatus('cancelled');
               }} />
             )}
           </div>
+
           {showTransfer && (
-            <RoomTransferForm booking={booking} onSuccess={(updated) => { onUpdate(updated); setShowTransfer(false); }} onCancel={() => setShowTransfer(false)} />
+            <RoomTransferForm
+              booking={booking}
+              onSuccess={(updated) => { onUpdate(updated); setShowTransfer(false); }}
+              onCancel={() => setShowTransfer(false)}
+            />
           )}
         </div>
       )}
@@ -288,7 +302,7 @@ export default function StaffDashboardPage() {
   const [tab, setTab] = useState('');
   const [error, setError] = useState('');
 
-  const fetchBookings = (status = '') => {
+  const fetchBookings = useCallback((status = '') => {
     setLoading(true);
     setError('');
     const params = status ? { status } : {};
@@ -296,19 +310,19 @@ export default function StaffDashboardPage() {
       .then((res) => setBookings(res.data))
       .catch((err) => setError(err.response?.data?.message || 'ໂຫຼດຂໍ້ມູນລົ້ມເຫຼວ'))
       .finally(() => setLoading(false));
-  };
+  }, []);
 
-  useEffect(() => { fetchBookings(tab); }, [tab]);
+  useEffect(() => { fetchBookings(tab); }, [tab, fetchBookings]);
 
   const handleUpdate = (updated) => {
+    if (!updated) return;
     setBookings((prev) => prev.map((b) => (b.b_id === updated.b_id ? updated : b)));
   };
 
   const needAttention = bookings.filter(
-    (b) => (b.status === 'pending' && b.deposit_slip) ||
-            b.status === 'checking_in' ||
-            b.status === 'checking_out' ||
-            (b.status === 'checked_in' && b.payments?.some((p) => p.type === 'final' && p.status === 'pending'))
+    (b) => b.status === 'checking_in' ||
+           b.status === 'checking_out' ||
+           b.payments?.some((p) => p.status === 'pending')
   ).length;
 
   return (
