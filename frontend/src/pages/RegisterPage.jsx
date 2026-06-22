@@ -38,8 +38,9 @@ export default function RegisterPage() {
   const inputCls = 'w-full border border-rose-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-rose-300';
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-green-50 py-8">
-      <div className="bg-white p-8 rounded-2xl shadow-lg w-full max-w-md border border-rose-100">
+    <div className="min-h-screen flex items-center justify-center py-8">
+      <img src="/images/hero.jpeg" alt="" className="fixed inset-0 w-full h-full object-cover -z-10" />
+      <div className="bg-white/90 backdrop-blur-sm p-8 rounded-2xl shadow-lg w-full max-w-md border border-rose-100">
 
         <div className="text-center mb-6">
           <div className="text-4xl mb-2">🎤</div>

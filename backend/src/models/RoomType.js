@@ -8,7 +8,6 @@ const RoomType = sequelize.define('RoomType', {
   capacity:     { type: DataTypes.INTEGER, allowNull: false, defaultValue: 4 },
   price_per_hour: { type: DataTypes.DECIMAL(10, 2), allowNull: false },
   amenities:    { type: DataTypes.TEXT },
-  image_url:    { type: DataTypes.STRING(500) },
 }, {
   tableName: 'room_types',
   timestamps: true,

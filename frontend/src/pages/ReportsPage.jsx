@@ -1,5 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import api from '../api/axios';
+import { useAuth } from '../context/AuthContext';
 
 function formatDate(iso) {
   if (!iso) return '-';
@@ -207,31 +209,81 @@ const TABS = [
   { key: 'bookings', label: 'ການຈອງປະຈຳວັນ (6.1)' },
   { key: 'revenue', label: 'ລາຍຮັບ (6.2)' },
   { key: 'rooms', label: 'ສະຖິຕິຫ້ອງ (6.3)' },
-  { key: 'customers', label: 'ຂໍ້ມູນລູກຄ້າ (6.4)' },
+];
+
+const SIDEBAR_NAV = [
+  { label: '📋 ການຈອງ', path: '/staff' },
+  { label: '📊 ລາຍງານ', path: '/reports' },
+];
+
+const ADMIN_NAV = [
+  { label: '🏠 ຫ້ອງ / ສະມາຊິກ', path: '/admin' },
 ];
 
 export default function ReportsPage() {
+  const navigate = useNavigate();
+  const { isAdmin } = useAuth();
   const [tab, setTab] = useState('bookings');
 
   return (
-    <div className="min-h-screen bg-green-50 py-8 px-4">
-      <div className="max-w-5xl mx-auto">
-        <h1 className="text-2xl font-bold text-[#7B2438] mb-6">ລາຍງານ (P6)</h1>
+    <div className="min-h-screen bg-green-50 flex">
 
-        <div className="flex gap-2 mb-6 flex-wrap">
-          {TABS.map((t) => (
-            <button key={t.key} onClick={() => setTab(t.key)}
-              className={`px-4 py-2 rounded-lg text-sm font-semibold transition ${tab === t.key ? 'bg-[#7B2438] text-white' : 'bg-white text-gray-600 border hover:bg-rose-50'}`}>
-              {t.label}
+      {/* ─── Sidebar ─── */}
+      <aside className="w-52 bg-[#7B2438] min-h-screen shrink-0 flex flex-col">
+        <div className="px-5 py-5 border-b border-rose-700">
+          <p className="text-white font-bold text-sm tracking-wide">DASHBOARD</p>
+          <p className="text-rose-300 text-xs mt-0.5">ລະບົບຈັດການ</p>
+        </div>
+        <nav className="flex flex-col py-2">
+          {SIDEBAR_NAV.map((item) => (
+            <button
+              key={item.path}
+              onClick={() => navigate(item.path)}
+              className={`text-left px-5 py-3 text-sm font-medium transition border-l-4 ${
+                item.path === '/reports'
+                  ? 'bg-rose-900 text-white border-white'
+                  : 'text-rose-300 border-transparent hover:bg-rose-900 hover:text-white'
+              }`}
+            >
+              {item.label}
             </button>
           ))}
-        </div>
+          {isAdmin && (
+            <>
+              <div className="border-t border-rose-700 mt-2 pt-2" />
+              {ADMIN_NAV.map((item) => (
+                <button
+                  key={item.path}
+                  onClick={() => navigate(item.path)}
+                  className="text-left px-5 py-3 text-sm font-medium text-rose-300 border-l-4 border-transparent hover:bg-rose-900 hover:text-white transition"
+                >
+                  {item.label}
+                </button>
+              ))}
+            </>
+          )}
+        </nav>
+      </aside>
 
-        <div className="bg-white rounded-2xl shadow-sm p-6">
-          {tab === 'bookings' && <BookingsReport />}
-          {tab === 'revenue' && <RevenueReport />}
-          {tab === 'rooms' && <RoomsReport />}
-          {tab === 'customers' && <CustomersReport />}
+      {/* ─── Main Content ─── */}
+      <div className="flex-1 py-8 px-6">
+        <div className="max-w-5xl">
+          <h1 className="text-2xl font-bold text-[#7B2438] mb-6">ລາຍງານ</h1>
+
+          <div className="flex gap-2 mb-6 flex-wrap">
+            {TABS.map((t) => (
+              <button key={t.key} onClick={() => setTab(t.key)}
+                className={`px-4 py-2 rounded-lg text-sm font-semibold transition ${tab === t.key ? 'bg-[#7B2438] text-white' : 'bg-white text-gray-600 border hover:bg-rose-50'}`}>
+                {t.label}
+              </button>
+            ))}
+          </div>
+
+          <div className="bg-white rounded-2xl shadow-sm p-6">
+            {tab === 'bookings' && <BookingsReport />}
+            {tab === 'revenue' && <RevenueReport />}
+            {tab === 'rooms' && <RoomsReport />}
+          </div>
         </div>
       </div>
     </div>

@@ -15,11 +15,9 @@ const STATUS_CONFIG = {
 
 const TABS = [
   { key: '', label: 'ທັງໝົດ' },
-  { key: 'pending', label: 'ລໍການຢືນຢັນ' },
   { key: 'confirmed', label: 'ຢືນຢັນແລ້ວ' },
   { key: 'checking_in', label: 'ລໍ check-in' },
   { key: 'checked_in', label: 'ເຊັກອິນແລ້ວ' },
-  { key: 'checking_out', label: 'ລໍ check-out' },
   { key: 'completed', label: 'ສຳເລັດ' },
   { key: 'cancelled', label: 'ຍົກເລີກ' },
 ];
@@ -223,6 +221,30 @@ function BookingRow({ booking, onUpdate }) {
               ))}
             </div>
           )}
+
+          {/* ສະຫຼຸບລາຄາ ກ່ອນ check-out */}
+          {['checked_in', 'checking_out'].includes(booking.status) && (() => {
+            const total = parseFloat(booking.total_price || 0);
+            const deposit = parseFloat(booking.deposit_amount || 0);
+            const remaining = total - deposit;
+            return (
+              <div className="rounded-xl border-2 border-orange-300 bg-orange-50 px-4 py-3 flex flex-col gap-1">
+                <p className="text-xs font-bold text-orange-700 mb-1">ສະຫຼຸບລາຄາ</p>
+                <div className="flex justify-between text-sm text-gray-600">
+                  <span>ລາຄາລວມ</span>
+                  <span className="font-semibold">฿{total.toLocaleString()}</span>
+                </div>
+                <div className="flex justify-between text-sm text-gray-600">
+                  <span>ມັດຈຳທີ່ຈ່າຍແລ້ວ</span>
+                  <span className="text-green-600 font-semibold">- ฿{deposit.toLocaleString()}</span>
+                </div>
+                <div className="flex justify-between text-base font-bold border-t border-orange-200 pt-1 mt-1">
+                  <span className="text-orange-700">ຍັງຄ້າງຊຳລະ</span>
+                  <span className="text-orange-700">฿{remaining.toLocaleString()}</span>
+                </div>
+              </div>
+            );
+          })()}
 
           {/* Action buttons */}
           <div className="flex gap-2 flex-wrap">

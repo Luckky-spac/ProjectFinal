@@ -196,6 +196,21 @@ const checkoutConfirm = async (req, res) => {
     }
     await booking.update({ status: 'completed', actual_check_out: new Date() });
     await Room.update({ status: 'available' }, { where: { r_id: booking.r_id } });
+
+    // auto-create final payment = total_price (deposit + remaining = 1 record) if not exists
+    const existingFinal = await Payment.findOne({
+      where: { b_id: booking.b_id, type: 'final', status: 'confirmed' },
+    });
+    if (!existingFinal) {
+      await Payment.create({
+        b_id: booking.b_id,
+        amount: parseFloat(booking.total_price),
+        type: 'final',
+        method: 'cash',
+        status: 'confirmed',
+      });
+    }
+
     const full = await Booking.findByPk(booking.b_id, { include: bookingIncludes });
     res.json(full);
   } catch (err) {

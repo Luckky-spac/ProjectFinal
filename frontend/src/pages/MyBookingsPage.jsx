@@ -298,7 +298,7 @@ function BookingCard({ booking, isNew, onUpdate }) {
         <>
           <button onClick={() => setShowDeposit((v) => !v)}
             className="text-sm py-2 bg-yellow-500 text-white rounded-xl font-semibold hover:bg-yellow-600">
-            {showDeposit ? 'ຊ່ອນ' : 'ຊຳລະມັດຈຳ'}
+            {showDeposit ? 'ຫຍໍ້ໜ້າ' : 'ຈ່າຍຄ່າມັດຈຳ'}
           </button>
           {showDeposit && (
             <PaymentForm booking={booking} type="deposit"
@@ -317,7 +317,7 @@ function BookingCard({ booking, isNew, onUpdate }) {
       {booking.status === 'confirmed' && (
         <button onClick={doCheckin} disabled={actionLoading}
           className="text-sm py-2 bg-blue-600 text-white rounded-xl font-semibold hover:bg-blue-700 disabled:opacity-50">
-          {actionLoading ? 'ກຳລັງດຳເນີນການ...' : 'ຂ້ອຍມາເຖິງແລ້ວ (Check-in)'}
+          {actionLoading ? 'ກຳລັງດຳເນີນການ...' : 'ຂ້ອຍມາຮອດແລ້ວ (Check-in)'}
         </button>
       )}
 
