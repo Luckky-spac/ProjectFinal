@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../api/axios';
 import { useAuth } from '../context/AuthContext';
@@ -311,14 +311,214 @@ function BookingRow({ booking, onUpdate }) {
   );
 }
 
+// ─── Member management helpers ────────────────────────────────────────────────
+function Btn({ label, color = 'purple', onClick, disabled, small }) {
+  const colors = {
+    purple: 'bg-[#7B2438] hover:bg-rose-900 text-white',
+    red: 'bg-red-500 hover:bg-red-600 text-white',
+    gray: 'bg-gray-200 hover:bg-gray-300 text-gray-700',
+  };
+  return (
+    <button onClick={onClick} disabled={disabled}
+      className={`${small ? 'text-xs px-3 py-1.5' : 'text-sm px-4 py-2'} rounded-lg font-semibold transition disabled:opacity-40 ${colors[color]}`}>
+      {label}
+    </button>
+  );
+}
+
+function Field({ label, name, value, onChange, type = 'text', required, options, ...rest }) {
+  return (
+    <div>
+      <label className="text-xs text-gray-500 mb-1 block">{label}{required && ' *'}</label>
+      {options ? (
+        <select name={name} value={value} onChange={onChange}
+          className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-rose-300">
+          {options.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+        </select>
+      ) : (
+        <input name={name} type={type} value={value} onChange={onChange} required={required}
+          {...rest}
+          className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-rose-300" />
+      )}
+    </div>
+  );
+}
+
+const EMPTY_MEMBER = { fname: '', lname: '', email: '', password: '', phone: '', gender: '', birthday: '' };
+const GENDER_LABEL = { male: 'ຊາຍ', female: 'ຍິງ', other: 'ອື່ນໆ' };
+
+function MembersPanel() {
+  const [users, setUsers] = useState([]);
+  const [editing, setEditing] = useState(null);
+  const [form, setForm] = useState({ fname: '', lname: '', phone: '', password: '' });
+  const [adding, setAdding] = useState(false);
+  const [addForm, setAddForm] = useState(EMPTY_MEMBER);
+  const [viewing, setViewing] = useState(null);
+  const [loading, setLoading] = useState(false);
+
+  const load = useCallback(() => {
+    api.get('/users').then((r) => setUsers(r.data)).catch(() => {});
+  }, []);
+  useEffect(load, [load]);
+
+  const startEdit = (u) => {
+    setEditing(u.u_id);
+    setAdding(false);
+    setViewing(null);
+    setForm({ fname: u.customer?.fname || '', lname: u.customer?.lname || '', phone: u.customer?.phone || '', password: '' });
+  };
+
+  const save = async () => {
+    setLoading(true);
+    try {
+      await api.put(`/users/${editing}`, form);
+      load();
+      setEditing(null);
+    } catch (err) {
+      alert(err.response?.data?.message || 'ເກີດຂໍ້ຜິດພາດ');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const saveNew = async () => {
+    setLoading(true);
+    try {
+      await api.post('/users', addForm);
+      load();
+      setAdding(false);
+      setAddForm(EMPTY_MEMBER);
+    } catch (err) {
+      alert(err.response?.data?.message || 'ເກີດຂໍ້ຜິດພາດ');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const del = async (id) => {
+    if (!window.confirm('ຢືນຢັນລົບຜູ້ໃຊ້ນີ້?')) return;
+    try { await api.delete(`/users/${id}`); load(); }
+    catch (err) { alert(err.response?.data?.message || 'ເກີດຂໍ້ຜິດພາດ'); }
+  };
+
+  const toggleView = (id) => setViewing((v) => (v === id ? null : id));
+
+  return (
+    <div className="bg-white rounded-2xl shadow-sm p-6">
+      <div className="flex justify-between items-center mb-4">
+        <h2 className="font-semibold text-gray-700">ສະມາຊິກທັງໝົດ ({users.length})</h2>
+        <Btn small label="+ ເພີ່ມສະມາຊິກ" onClick={() => { setAdding(true); setEditing(null); setViewing(null); setAddForm(EMPTY_MEMBER); }} />
+      </div>
+
+      {adding && (
+        <div className="bg-rose-50 border border-rose-100 rounded-xl p-4 mb-4">
+          <p className="text-xs font-semibold text-[#7B2438] mb-3">ເພີ່ມສະມາຊິກໃໝ່ (ສະໝັກແທນລູກຄ້າ)</p>
+          <div className="grid grid-cols-2 gap-2 mb-3">
+            <Field label="ຊື່ *" name="fname" value={addForm.fname} onChange={(e) => setAddForm(f => ({ ...f, fname: e.target.value }))} required />
+            <Field label="ນາມສະກຸນ" name="lname" value={addForm.lname} onChange={(e) => setAddForm(f => ({ ...f, lname: e.target.value }))} />
+            <Field label="ອີເມລ *" name="email" type="email" value={addForm.email} onChange={(e) => setAddForm(f => ({ ...f, email: e.target.value }))} required />
+            <Field label="ລະຫັດຜ່ານ *" name="password" type="password" value={addForm.password} onChange={(e) => setAddForm(f => ({ ...f, password: e.target.value }))} required />
+            <Field label="ເບີໂທ *" name="phone" value={addForm.phone} onChange={(e) => setAddForm(f => ({ ...f, phone: e.target.value }))} required />
+            <Field label="ເພດ" name="gender" value={addForm.gender} onChange={(e) => setAddForm(f => ({ ...f, gender: e.target.value }))}
+              options={[{ value: '', label: '-- ບໍ່ລະບຸ --' }, { value: 'male', label: 'ຊາຍ' }, { value: 'female', label: 'ຍິງ' }, { value: 'other', label: 'ອື່ນໆ' }]} />
+            <Field label="ວັນເດືອນປີເກີດ" name="birthday" type="date" value={addForm.birthday} onChange={(e) => setAddForm(f => ({ ...f, birthday: e.target.value }))} />
+          </div>
+          <div className="flex gap-2">
+            <Btn small label="ເພີ່ມສະມາຊິກ" onClick={saveNew} disabled={loading} />
+            <Btn small label="ຍົກເລີກ" color="gray" onClick={() => setAdding(false)} />
+          </div>
+        </div>
+      )}
+
+      <div className="overflow-x-auto">
+        <table className="w-full text-sm">
+          <thead><tr className="text-left text-gray-400 border-b text-xs">
+            <th className="pb-2 pr-4">ຊື່</th><th className="pb-2 pr-4">ອີເມລ</th>
+            <th className="pb-2 pr-4">ໂທ</th><th className="pb-2">ຈັດການ</th>
+          </tr></thead>
+          <tbody>
+            {users.length === 0 && (
+              <tr><td colSpan={4} className="py-10 text-center text-gray-400">ຍັງບໍ່ມີສະມາຊິກ</td></tr>
+            )}
+            {users.map((u) => (
+              <React.Fragment key={u.u_id}>
+                <tr className="border-b">
+                  {editing === u.u_id ? (
+                    <td colSpan={4} className="py-3">
+                      <div className="grid grid-cols-2 gap-2 mb-2">
+                        <Field label="ຊື່" name="fname" value={form.fname} onChange={(e) => setForm(f => ({ ...f, fname: e.target.value }))} required />
+                        <Field label="ນາມສະກຸນ" name="lname" value={form.lname} onChange={(e) => setForm(f => ({ ...f, lname: e.target.value }))} />
+                        <Field label="ໂທ" name="phone" value={form.phone} onChange={(e) => setForm(f => ({ ...f, phone: e.target.value }))} />
+                        <Field label="ລະຫັດຜ່ານໃໝ່ (ບໍ່ບັງຄັບ)" name="password" type="password" value={form.password} onChange={(e) => setForm(f => ({ ...f, password: e.target.value }))} />
+                      </div>
+                      <div className="flex gap-2">
+                        <Btn small label="ບັນທຶກ" onClick={save} disabled={loading} />
+                        <Btn small label="ຍົກເລີກ" color="gray" onClick={() => setEditing(null)} />
+                      </div>
+                    </td>
+                  ) : (
+                    <>
+                      <td className="py-2 pr-4 font-medium">{[u.customer?.fname, u.customer?.lname].filter(Boolean).join(' ') || '-'}</td>
+                      <td className="py-2 pr-4 text-gray-500">{u.email}</td>
+                      <td className="py-2 pr-4 text-gray-500">{u.customer?.phone || '-'}</td>
+                      <td className="py-2 flex gap-2">
+                        <Btn small label={viewing === u.u_id ? '▲ ປິດ' : 'ລາຍລະອຽດ'} color="gray" onClick={() => toggleView(u.u_id)} />
+                        <Btn small label="ແກ້ໄຂ" color="gray" onClick={() => startEdit(u)} />
+                        <Btn small label="ລົບ" color="red" onClick={() => del(u.u_id)} />
+                      </td>
+                    </>
+                  )}
+                </tr>
+                {viewing === u.u_id && editing !== u.u_id && (
+                  <tr>
+                    <td colSpan={4} className="pb-3">
+                      <div className="bg-rose-50 border border-rose-100 rounded-xl p-4 grid grid-cols-3 gap-3 text-sm">
+                        <div>
+                          <span className="text-xs text-gray-400 block mb-0.5">ຊື່ - ນາມສະກຸນ</span>
+                          <span className="font-medium">{[u.customer?.fname, u.customer?.lname].filter(Boolean).join(' ') || '-'}</span>
+                        </div>
+                        <div>
+                          <span className="text-xs text-gray-400 block mb-0.5">ອີເມລ</span>
+                          <span>{u.email}</span>
+                        </div>
+                        <div>
+                          <span className="text-xs text-gray-400 block mb-0.5">ເບີໂທ</span>
+                          <span>{u.customer?.phone || '-'}</span>
+                        </div>
+                        <div>
+                          <span className="text-xs text-gray-400 block mb-0.5">ເພດ</span>
+                          <span>{GENDER_LABEL[u.customer?.gender] || '-'}</span>
+                        </div>
+                        <div>
+                          <span className="text-xs text-gray-400 block mb-0.5">ວັນເດືອນປີເກີດ</span>
+                          <span>{u.customer?.birthday ? new Date(u.customer.birthday).toLocaleDateString('lo-LA') : '-'}</span>
+                        </div>
+                        <div>
+                          <span className="text-xs text-gray-400 block mb-0.5">ສະຖານະ</span>
+                          <span className="text-xs px-2 py-0.5 rounded-full bg-green-100 text-green-700 font-semibold">ສະມາຊິກ</span>
+                        </div>
+                      </div>
+                    </td>
+                  </tr>
+                )}
+              </React.Fragment>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
 const ADMIN_NAV = [
-  { label: '🏠 ຫ້ອງ / ສະມາຊິກ', path: '/admin' },
+  { label: '🛠 ຈັດການລະບົບ', path: '/admin' },
   { label: '📊 ລາຍງານ', path: '/reports' },
 ];
 
 export default function StaffDashboardPage() {
   const navigate = useNavigate();
   const { isAdmin } = useAuth();
+  const [view, setView] = useState('bookings'); // 'bookings' | 'members'
   const [bookings, setBookings] = useState([]);
   const [loading, setLoading] = useState(true);
   const [tab, setTab] = useState('');
@@ -334,7 +534,9 @@ export default function StaffDashboardPage() {
       .finally(() => setLoading(false));
   }, []);
 
-  useEffect(() => { fetchBookings(tab); }, [tab, fetchBookings]);
+  useEffect(() => {
+    if (view === 'bookings') fetchBookings(tab);
+  }, [tab, view, fetchBookings]);
 
   const handleUpdate = (updated) => {
     if (!updated) return;
@@ -358,10 +560,25 @@ export default function StaffDashboardPage() {
         </div>
         <nav className="flex flex-col py-2">
           <button
-            onClick={() => navigate('/staff')}
-            className="text-left px-5 py-3 text-sm font-medium transition border-l-4 bg-rose-900 text-white border-white"
+            onClick={() => setView('bookings')}
+            className={`text-left px-5 py-3 text-sm font-medium transition border-l-4 ${
+              view === 'bookings' ? 'bg-rose-900 text-white border-white' : 'text-rose-300 border-transparent hover:bg-rose-900 hover:text-white'
+            }`}
           >
             📋 ການຈອງ
+            {needAttention > 0 && (
+              <span className="ml-2 bg-orange-500 text-white text-xs rounded-full px-1.5 py-0.5 font-bold">
+                {needAttention}
+              </span>
+            )}
+          </button>
+          <button
+            onClick={() => setView('members')}
+            className={`text-left px-5 py-3 text-sm font-medium transition border-l-4 ${
+              view === 'members' ? 'bg-rose-900 text-white border-white' : 'text-rose-300 border-transparent hover:bg-rose-900 hover:text-white'
+            }`}
+          >
+            👤 ສະມາຊິກ
           </button>
           {isAdmin && (
             <>
@@ -378,59 +595,66 @@ export default function StaffDashboardPage() {
             </>
           )}
         </nav>
-        {needAttention > 0 && (
-          <div className="mx-4 mt-4 bg-orange-500 text-white rounded-xl px-3 py-2 text-xs text-center font-semibold">
-            {needAttention} ລາຍການລໍຖ້າ
-          </div>
-        )}
       </aside>
 
       {/* ─── Main Content ─── */}
       <div className="flex-1 py-8 px-6">
-        <div className="max-w-3xl">
-          <div className="flex items-center justify-between mb-6">
-            <div>
-              <h1 className="text-2xl font-bold text-[#7B2438]">ການຈອງ</h1>
-              {needAttention > 0 && (
-                <p className="text-sm text-orange-600 font-medium mt-0.5">
-                  {needAttention} ລາຍການລໍດຳເນີນການ
-                </p>
-              )}
-            </div>
-            <button onClick={() => fetchBookings(tab)}
-              className="text-sm text-[#7B2438] hover:underline font-medium">
-              ໂຫຼດໃໝ່
-            </button>
-          </div>
 
-          {/* Status Tabs */}
-          <div className="flex gap-1.5 flex-wrap mb-5">
-            {TABS.map((t) => (
-              <button key={t.key} onClick={() => setTab(t.key)}
-                className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition ${
-                  tab === t.key
-                    ? 'bg-[#7B2438] text-white'
-                    : 'bg-white text-gray-600 border border-gray-200 hover:bg-rose-50'
-                }`}>
-                {t.label}
+        {/* Members View */}
+        {view === 'members' && (
+          <div className="max-w-4xl">
+            <h1 className="text-2xl font-bold text-[#7B2438] mb-6">👤 ສະມາຊິກ</h1>
+            <MembersPanel />
+          </div>
+        )}
+
+        {/* Bookings View */}
+        {view === 'bookings' && (
+          <div className="max-w-3xl">
+            <div className="flex items-center justify-between mb-6">
+              <div>
+                <h1 className="text-2xl font-bold text-[#7B2438]">ການຈອງ</h1>
+                {needAttention > 0 && (
+                  <p className="text-sm text-orange-600 font-medium mt-0.5">
+                    {needAttention} ລາຍການລໍດຳເນີນການ
+                  </p>
+                )}
+              </div>
+              <button onClick={() => fetchBookings(tab)}
+                className="text-sm text-[#7B2438] hover:underline font-medium">
+                ໂຫຼດໃໝ່
               </button>
-            ))}
-          </div>
+            </div>
 
-          {error && <p className="text-red-500 text-sm mb-4">{error}</p>}
-
-          {loading ? (
-            <div className="flex justify-center py-20 text-gray-400">ກຳລັງໂຫຼດ...</div>
-          ) : bookings.length === 0 ? (
-            <div className="text-center py-20 text-gray-400">ບໍ່ມີການຈອງ</div>
-          ) : (
-            <div className="flex flex-col gap-3">
-              {bookings.map((b) => (
-                <BookingRow key={b.b_id} booking={b} onUpdate={handleUpdate} />
+            {/* Status Tabs */}
+            <div className="flex gap-1.5 flex-wrap mb-5">
+              {TABS.map((t) => (
+                <button key={t.key} onClick={() => setTab(t.key)}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition ${
+                    tab === t.key
+                      ? 'bg-[#7B2438] text-white'
+                      : 'bg-white text-gray-600 border border-gray-200 hover:bg-rose-50'
+                  }`}>
+                  {t.label}
+                </button>
               ))}
             </div>
-          )}
-        </div>
+
+            {error && <p className="text-red-500 text-sm mb-4">{error}</p>}
+
+            {loading ? (
+              <div className="flex justify-center py-20 text-gray-400">ກຳລັງໂຫຼດ...</div>
+            ) : bookings.length === 0 ? (
+              <div className="text-center py-20 text-gray-400">ບໍ່ມີການຈອງ</div>
+            ) : (
+              <div className="flex flex-col gap-3">
+                {bookings.map((b) => (
+                  <BookingRow key={b.b_id} booking={b} onUpdate={handleUpdate} />
+                ))}
+              </div>
+            )}
+          </div>
+        )}
       </div>
     </div>
   );

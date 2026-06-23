@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../api/axios';
 
@@ -37,10 +37,16 @@ function Field({ label, name, value, onChange, type = 'text', required, options,
 }
 
 // ─── Users Tab ───────────────────────────────────────────────────────────────
+const EMPTY_MEMBER = { fname: '', lname: '', email: '', password: '', phone: '', gender: '', birthday: '' };
+const GENDER_LABEL = { male: 'ຊາຍ', female: 'ຍິງ', other: 'ອື່ນໆ' };
+
 function UsersTab() {
   const [users, setUsers] = useState([]);
   const [editing, setEditing] = useState(null);
   const [form, setForm] = useState({ fname: '', lname: '', phone: '', password: '' });
+  const [adding, setAdding] = useState(false);
+  const [addForm, setAddForm] = useState(EMPTY_MEMBER);
+  const [viewing, setViewing] = useState(null);
   const [loading, setLoading] = useState(false);
 
   const load = useCallback(() => {
@@ -50,6 +56,8 @@ function UsersTab() {
 
   const startEdit = (u) => {
     setEditing(u.u_id);
+    setAdding(false);
+    setViewing(null);
     setForm({ fname: u.customer?.fname || '', lname: u.customer?.lname || '', phone: u.customer?.phone || '', password: '' });
   };
 
@@ -66,15 +74,55 @@ function UsersTab() {
     }
   };
 
+  const saveNew = async () => {
+    setLoading(true);
+    try {
+      await api.post('/users', addForm);
+      load();
+      setAdding(false);
+      setAddForm(EMPTY_MEMBER);
+    } catch (err) {
+      alert(err.response?.data?.message || 'ເກີດຂໍ້ຜິດພາດ');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const del = async (id) => {
     if (!window.confirm('ຢືນຢັນລົບຜູ້ໃຊ້ນີ້?')) return;
     try { await api.delete(`/users/${id}`); load(); }
     catch (err) { alert(err.response?.data?.message || 'ເກີດຂໍ້ຜິດພາດ'); }
   };
 
+  const toggleView = (id) => setViewing((v) => (v === id ? null : id));
+
   return (
     <div>
-      <h2 className="font-semibold text-gray-700 mb-3">ສະມາຊິກ ({users.length})</h2>
+      <div className="flex justify-between items-center mb-3">
+        <h2 className="font-semibold text-gray-700">ສະມາຊິກ ({users.length})</h2>
+        <Btn small label="+ ເພີ່ມສະມາຊິກ" onClick={() => { setAdding(true); setEditing(null); setViewing(null); setAddForm(EMPTY_MEMBER); }} />
+      </div>
+
+      {adding && (
+        <div className="bg-rose-50 border border-rose-100 rounded-xl p-4 mb-4">
+          <p className="text-xs font-semibold text-[#7B2438] mb-3">ເພີ່ມສະມາຊິກໃໝ່ (ສະໝັກແທນລູກຄ້າ)</p>
+          <div className="grid grid-cols-2 gap-2 mb-3">
+            <Field label="ຊື່ *" name="fname" value={addForm.fname} onChange={(e) => setAddForm(f => ({ ...f, fname: e.target.value }))} required />
+            <Field label="ນາມສະກຸນ" name="lname" value={addForm.lname} onChange={(e) => setAddForm(f => ({ ...f, lname: e.target.value }))} />
+            <Field label="ອີເມລ *" name="email" type="email" value={addForm.email} onChange={(e) => setAddForm(f => ({ ...f, email: e.target.value }))} required />
+            <Field label="ລະຫັດຜ່ານ *" name="password" type="password" value={addForm.password} onChange={(e) => setAddForm(f => ({ ...f, password: e.target.value }))} required />
+            <Field label="ເບີໂທ *" name="phone" value={addForm.phone} onChange={(e) => setAddForm(f => ({ ...f, phone: e.target.value }))} required />
+            <Field label="ເພດ" name="gender" value={addForm.gender} onChange={(e) => setAddForm(f => ({ ...f, gender: e.target.value }))}
+              options={[{ value: '', label: '-- ບໍ່ລະບຸ --' }, { value: 'male', label: 'ຊາຍ' }, { value: 'female', label: 'ຍິງ' }, { value: 'other', label: 'ອື່ນໆ' }]} />
+            <Field label="ວັນເດືອນປີເກີດ" name="birthday" type="date" value={addForm.birthday} onChange={(e) => setAddForm(f => ({ ...f, birthday: e.target.value }))} />
+          </div>
+          <div className="flex gap-2">
+            <Btn small label="ເພີ່ມສະມາຊິກ" onClick={saveNew} disabled={loading} />
+            <Btn small label="ຍົກເລີກ" color="gray" onClick={() => setAdding(false)} />
+          </div>
+        </div>
+      )}
+
       <div className="overflow-x-auto">
         <table className="w-full text-sm">
           <thead><tr className="text-left text-gray-400 border-b text-xs">
@@ -83,32 +131,67 @@ function UsersTab() {
           </tr></thead>
           <tbody>
             {users.map((u) => (
-              <tr key={u.u_id} className="border-b last:border-0">
-                {editing === u.u_id ? (
-                  <td colSpan={4} className="py-3">
-                    <div className="grid grid-cols-2 gap-2 mb-2">
-                      <Field label="ຊື່" name="fname" value={form.fname} onChange={(e) => setForm(f => ({ ...f, fname: e.target.value }))} required />
-                      <Field label="ນາມສະກຸນ" name="lname" value={form.lname} onChange={(e) => setForm(f => ({ ...f, lname: e.target.value }))} />
-                      <Field label="ໂທ" name="phone" value={form.phone} onChange={(e) => setForm(f => ({ ...f, phone: e.target.value }))} />
-                      <Field label="ລະຫັດຜ່ານໃໝ່ (ບໍ່ບັງຄັບ)" name="password" type="password" value={form.password} onChange={(e) => setForm(f => ({ ...f, password: e.target.value }))} />
-                    </div>
-                    <div className="flex gap-2">
-                      <Btn small label="ບັນທຶກ" onClick={save} disabled={loading} />
-                      <Btn small label="ຍົກເລີກ" color="gray" onClick={() => setEditing(null)} />
-                    </div>
-                  </td>
-                ) : (
-                  <>
-                    <td className="py-2 pr-4 font-medium">{[u.customer?.fname, u.customer?.lname].filter(Boolean).join(' ') || '-'}</td>
-                    <td className="py-2 pr-4 text-gray-500">{u.email}</td>
-                    <td className="py-2 pr-4 text-gray-500">{u.customer?.phone || '-'}</td>
-                    <td className="py-2 flex gap-2">
-                      <Btn small label="ແກ້ໄຂ" color="gray" onClick={() => startEdit(u)} />
-                      <Btn small label="ລົບ" color="red" onClick={() => del(u.u_id)} />
+              <React.Fragment key={u.u_id}>
+                <tr className="border-b">
+                  {editing === u.u_id ? (
+                    <td colSpan={4} className="py-3">
+                      <div className="grid grid-cols-2 gap-2 mb-2">
+                        <Field label="ຊື່" name="fname" value={form.fname} onChange={(e) => setForm(f => ({ ...f, fname: e.target.value }))} required />
+                        <Field label="ນາມສະກຸນ" name="lname" value={form.lname} onChange={(e) => setForm(f => ({ ...f, lname: e.target.value }))} />
+                        <Field label="ໂທ" name="phone" value={form.phone} onChange={(e) => setForm(f => ({ ...f, phone: e.target.value }))} />
+                        <Field label="ລະຫັດຜ່ານໃໝ່ (ບໍ່ບັງຄັບ)" name="password" type="password" value={form.password} onChange={(e) => setForm(f => ({ ...f, password: e.target.value }))} />
+                      </div>
+                      <div className="flex gap-2">
+                        <Btn small label="ບັນທຶກ" onClick={save} disabled={loading} />
+                        <Btn small label="ຍົກເລີກ" color="gray" onClick={() => setEditing(null)} />
+                      </div>
                     </td>
-                  </>
+                  ) : (
+                    <>
+                      <td className="py-2 pr-4 font-medium">{[u.customer?.fname, u.customer?.lname].filter(Boolean).join(' ') || '-'}</td>
+                      <td className="py-2 pr-4 text-gray-500">{u.email}</td>
+                      <td className="py-2 pr-4 text-gray-500">{u.customer?.phone || '-'}</td>
+                      <td className="py-2 flex gap-2">
+                        <Btn small label={viewing === u.u_id ? '▲ ປິດ' : 'ລາຍລະອຽດ'} color="gray" onClick={() => toggleView(u.u_id)} />
+                        <Btn small label="ແກ້ໄຂ" color="gray" onClick={() => startEdit(u)} />
+                        <Btn small label="ລົບ" color="red" onClick={() => del(u.u_id)} />
+                      </td>
+                    </>
+                  )}
+                </tr>
+                {viewing === u.u_id && editing !== u.u_id && (
+                  <tr>
+                    <td colSpan={4} className="pb-3">
+                      <div className="bg-rose-50 border border-rose-100 rounded-xl p-4 grid grid-cols-3 gap-3 text-sm">
+                        <div>
+                          <span className="text-xs text-gray-400 block mb-0.5">ຊື່ - ນາມສະກຸນ</span>
+                          <span className="font-medium">{[u.customer?.fname, u.customer?.lname].filter(Boolean).join(' ') || '-'}</span>
+                        </div>
+                        <div>
+                          <span className="text-xs text-gray-400 block mb-0.5">ອີເມລ</span>
+                          <span>{u.email}</span>
+                        </div>
+                        <div>
+                          <span className="text-xs text-gray-400 block mb-0.5">ເບີໂທ</span>
+                          <span>{u.customer?.phone || '-'}</span>
+                        </div>
+                        <div>
+                          <span className="text-xs text-gray-400 block mb-0.5">ເພດ</span>
+                          <span>{GENDER_LABEL[u.customer?.gender] || '-'}</span>
+                        </div>
+                        <div>
+                          <span className="text-xs text-gray-400 block mb-0.5">ວັນເດືອນປີເກີດ</span>
+                          <span>{u.customer?.birthday ? new Date(u.customer.birthday).toLocaleDateString('lo-LA') : '-'}</span>
+                        </div>
+                        <div>
+                          <span className="text-xs text-gray-400 block mb-0.5">ສະຖານະ</span>
+                          <span className="text-xs px-2 py-0.5 rounded-full bg-green-100 text-green-700 font-semibold">ສະມາຊິກ</span>
+                        </div>
+                      </div>
+                    </td>
+                  </tr>
                 )}
-              </tr>
+              </React.Fragment>
             ))}
           </tbody>
         </table>

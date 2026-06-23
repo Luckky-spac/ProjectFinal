@@ -13,7 +13,7 @@ const empFullInclude = [
 
 const userWithCustomer = {
   attributes: { exclude: ['password'] },
-  include: [{ model: Customer, as: 'customer', attributes: ['fname', 'lname', 'phone'] }],
+  include: [{ model: Customer, as: 'customer', attributes: ['fname', 'lname', 'phone', 'gender', 'birthday'] }],
 };
 
 const getUsers = async (req, res) => {
@@ -66,6 +66,35 @@ const deleteUser = async (req, res) => {
     if (!user) return res.status(404).json({ message: 'ບໍ່ພົບຜູ້ໃຊ້ນີ້' });
     await user.destroy();
     res.json({ message: 'ລົບຜູ້ໃຊ້ສຳເລັດ' });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
+
+const createUser = async (req, res) => {
+  try {
+    const { fname, lname, email, password, phone, gender, birthday } = req.body;
+    if (!fname || !email || !password || !phone) {
+      return res.status(400).json({ message: 'fname, email, password ແລະ phone ຈຳເປັນຕ້ອງກອກ' });
+    }
+    if (phone.replace(/\D/g, '').length < 10) {
+      return res.status(400).json({ message: 'ເບີໂທຕ້ອງມີຢ່າງໜ້ອຍ 10 ຕົວເລກ' });
+    }
+    const exists = await User.findOne({ where: { email } });
+    if (exists) return res.status(409).json({ message: 'ອີເມລນີ້ຖືກໃຊ້ງານແລ້ວ' });
+
+    const hashed = await bcrypt.hash(password, 10);
+    const user = await User.create({ email, password: hashed, role: 'member' });
+    await Customer.create({
+      u_id: user.u_id,
+      fname,
+      lname: lname || '',
+      phone,
+      gender: gender || null,
+      birthday: birthday || null,
+    });
+
+    res.status(201).json({ message: 'ເພີ່ມສະມາຊິກສຳເລັດ', u_id: user.u_id });
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
@@ -236,7 +265,7 @@ const deleteRoomType = async (req, res) => {
 };
 
 module.exports = {
-  getUsers, getUserById, updateUser, deleteUser,
+  getUsers, getUserById, createUser, updateUser, deleteUser,
   getEmployees, getEmployeeById, createEmployee, updateEmployee, deleteEmployee,
   createRoomType, updateRoomType, deleteRoomType,
 };

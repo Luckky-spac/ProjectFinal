@@ -2,18 +2,19 @@ const express = require('express');
 const router = express.Router();
 const { authenticate, isEmployee, authorize } = require('../middleware/auth');
 const {
-  getUsers, getUserById, updateUser, deleteUser,
+  getUsers, getUserById, createUser, updateUser, deleteUser,
   getEmployees, getEmployeeById, createEmployee, updateEmployee, deleteEmployee,
   createRoomType, updateRoomType, deleteRoomType,
 } = require('../controllers/adminController');
 
 router.use(authenticate, isEmployee);
 
-// Users (admin เท่านั้น)
-router.get('/users', authorize('admin'), getUsers);
-router.get('/users/:id', authorize('admin'), getUserById);
-router.put('/users/:id', authorize('admin'), updateUser);
-router.delete('/users/:id', authorize('admin'), deleteUser);
+// Users — admin + staff จัดการได้ทั้งคู่
+router.get('/users', getUsers);
+router.get('/users/:id', getUserById);
+router.post('/users', createUser);
+router.put('/users/:id', updateUser);
+router.delete('/users/:id', deleteUser);
 
 // Employees (admin เท่านั้น)
 router.get('/employees', authorize('admin'), getEmployees);
