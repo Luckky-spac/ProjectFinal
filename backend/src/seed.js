@@ -1,6 +1,6 @@
 require('dotenv').config();
 const bcrypt = require('bcryptjs');
-const { sequelize, User, Customer, Employee, Province, District, Village, Address, RoomType, Room, Booking, Payment, Review, RoomTransfer } = require('./models');
+const { sequelize, User, Customer, Employee, Province, District, Village, RoomType, Room, Booking, Payment, Review } = require('./models');
 
 async function seed() {
   await sequelize.sync({ force: true });
@@ -16,10 +16,8 @@ async function seed() {
     { p_id: 4, name: 'ແຂວງສະຫວັນນະເຂດ' },
     { p_id: 5, name: 'ແຂວງຈຳປາສັກ' },
   ];
-  const provinces = {};
   for (const p of provincesData) {
-    const prov = await Province.create({ p_id: p.p_id, name: p.name });
-    provinces[p.p_id] = prov;
+    await Province.create({ p_id: p.p_id, name: p.name });
   }
   console.log('Provinces seeded');
 
@@ -38,10 +36,8 @@ async function seed() {
     { d_id: 11, name: 'ປາກເຊ',         p_id: 5 },
     { d_id: 12, name: 'ໂຂງ',           p_id: 5 },
   ];
-  const districts = {};
   for (const d of districtsData) {
-    const dist = await District.create({ d_id: d.d_id, name: d.name, p_id: d.p_id });
-    districts[d.d_id] = dist;
+    await District.create({ d_id: d.d_id, name: d.name, p_id: d.p_id });
   }
   console.log('Districts seeded');
 
@@ -68,25 +64,21 @@ async function seed() {
   }
   console.log('Villages seeded');
 
-  // ─── Addresses ────────────────────────────────────────────────────────────
-  const addr_admin = await Address.create({ detail: 'ເຮືອນເລກທີ 001', v_id: 1, d_id: 1, p_id: 1 });
-  const addr_staff = await Address.create({ detail: 'ເຮືອນເລກທີ 025', v_id: 3, d_id: 2, p_id: 1 });
-  console.log('Addresses seeded');
-
   // ─── Users (admin/staff) + Employees ─────────────────────────────────────
   const adminUser = await User.create({
     email: 'admin@karaoke.com',
     password: await hash('admin1234'),
     role: 'admin',
   });
-  const admin = await Employee.create({
+  await Employee.create({
     u_id: adminUser.u_id,
-    name: 'ເຈົ້າຂອງຮ້ານ',
+    fname: 'ເຈົ້າຂອງ',
+    lname: 'ຮ້ານ',
     phone: '0800000001',
     position: 'ເຈົ້າຂອງ',
     status: 'active',
     hire_date: '2024-01-01',
-    add_id: addr_admin.add_id,
+    v_id: 1,
   });
 
   const staffUser = await User.create({
@@ -94,14 +86,15 @@ async function seed() {
     password: await hash('staff1234'),
     role: 'staff',
   });
-  const staff = await Employee.create({
+  await Employee.create({
     u_id: staffUser.u_id,
-    name: 'ສົມສີ ພະນັກງານ',
+    fname: 'ສົມສີ',
+    lname: 'ພະນັກງານ',
     phone: '0800000002',
     position: 'ພະນັກງານຕ້ອນຮັບ',
     status: 'active',
     hire_date: '2024-03-01',
-    add_id: addr_staff.add_id,
+    v_id: 3,
   });
 
   // ─── Users (member) + Customers ───────────────────────────────────────────
@@ -156,60 +149,49 @@ async function seed() {
   const now = new Date();
   const d = (offsetHours) => new Date(now.getTime() + offsetHours * 3600000);
 
-  // S → pending
+  // S → pending (ยังไม่จ่ายมัดจำ)
   await Booking.create({
     u_id: memberUser.u_id, r_id: rooms['S'].r_id,
     start_time: d(24), end_time: d(26), guests: 3,
     total_price: 600, deposit_amount: 0, status: 'pending',
   });
 
-  // M → confirmed
+  // M → confirmed (จ่ายมัดจำแล้ว รอ check-in)
   const b2 = await Booking.create({
     u_id: memberUser2.u_id, r_id: rooms['M'].r_id,
     start_time: d(2), end_time: d(4), guests: 5,
     total_price: 1000, deposit_amount: 300,
-    deposit_slip: '/uploads/demo_slip.jpg',
-    status: 'confirmed', confirmed_by: adminUser.u_id,
+    status: 'confirmed',
   });
   await Payment.create({
-    b_id: b2.b_id, amount: 300, type: 'deposit', method: 'transfer',
-    slip_url: '/uploads/demo_slip.jpg', status: 'confirmed',
-    confirmed_by: adminUser.u_id, confirmed_at: new Date(),
+    b_id: b2.b_id, amount: 300, type: 'deposit', method: 'QR', status: 'confirmed',
   });
 
-  // L → checked_in
+  // L → checked_in (กำลังใช้งาน)
   const b3 = await Booking.create({
     u_id: memberUser.u_id, r_id: rooms['L'].r_id,
     start_time: d(-1), end_time: d(2), guests: 10,
     total_price: 2400, deposit_amount: 800,
-    deposit_slip: '/uploads/demo_slip.jpg',
-    status: 'checked_in', confirmed_by: staffUser.u_id, actual_check_in: d(-1),
+    status: 'checked_in', actual_check_in: d(-1),
   });
   await Payment.create({
-    b_id: b3.b_id, amount: 800, type: 'deposit', method: 'transfer',
-    slip_url: '/uploads/demo_slip.jpg', status: 'confirmed',
-    confirmed_by: staffUser.u_id, confirmed_at: d(-2),
+    b_id: b3.b_id, amount: 800, type: 'deposit', method: 'QR', status: 'confirmed',
   });
   await Room.update({ status: 'occupied' }, { where: { r_id: rooms['L'].r_id } });
 
-  // S → completed + review
+  // S → completed + review (ประวัติเก่า)
   const b4 = await Booking.create({
     u_id: memberUser2.u_id, r_id: rooms['S'].r_id,
     start_time: d(-50), end_time: d(-48), guests: 2,
     total_price: 600, deposit_amount: 200,
-    deposit_slip: '/uploads/demo_slip.jpg',
-    status: 'completed', confirmed_by: adminUser.u_id,
+    status: 'completed',
     actual_check_in: d(-50), actual_check_out: d(-48),
   });
   await Payment.create({
-    b_id: b4.b_id, amount: 200, type: 'deposit', method: 'transfer',
-    slip_url: '/uploads/demo_slip.jpg', status: 'confirmed',
-    confirmed_by: adminUser.u_id, confirmed_at: d(-52),
+    b_id: b4.b_id, amount: 200, type: 'deposit', method: 'QR', status: 'confirmed',
   });
   await Payment.create({
-    b_id: b4.b_id, amount: 400, type: 'final', method: 'transfer',
-    slip_url: '/uploads/demo_slip.jpg', status: 'confirmed',
-    confirmed_by: adminUser.u_id, confirmed_at: d(-48),
+    b_id: b4.b_id, amount: 400, type: 'final', method: 'cash', status: 'confirmed',
   });
   await Review.create({
     b_id: b4.b_id, u_id: memberUser2.u_id, r_id: rooms['S'].r_id,
@@ -225,8 +207,8 @@ async function seed() {
   console.log('  Member2: member2@karaoke.com/ member1234 (ລູກຄ້າ 2)');
   console.log('─────────────────────────────────────────');
   console.log('  ຫ້ອງທັງໝົດ 3 ຫ້ອງ:');
-  console.log('  S (ຫ້ອງນ້ອຍ)  → pending   (ລໍຖ້າ slip ມັດຈຳ)');
-  console.log('  M (ຫ້ອງກາງ)  → confirmed (ລໍ check-in)');
+  console.log('  S (ຫ້ອງນ້ອຍ)  → pending    (ລໍຈ່າຍມັດຈຳ)');
+  console.log('  M (ຫ້ອງກາງ)  → confirmed  (ລໍ check-in)');
   console.log('  L (ຫ້ອງໃຫຍ່) → checked_in (ກຳລັງໃຊ້ງານ)');
   console.log('  S (ຫ້ອງນ້ອຍ)  → completed + review (ອະດີດ, member2)');
 
