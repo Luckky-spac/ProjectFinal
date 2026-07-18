@@ -3,6 +3,7 @@ const express = require('express');
 const cors = require('cors');
 const { sequelize } = require('./models');
 const routes = require('./routes');
+const { startAutoCheckoutJob } = require('./jobs/autoCheckout');
 
 const app = express();
 
@@ -19,6 +20,7 @@ sequelize.sync({ alter: true })
   .then(() => {
     console.log('Database connected and synced');
     app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+    startAutoCheckoutJob();
   })
   .catch((err) => {
     console.error('Database connection failed:', err.message);
