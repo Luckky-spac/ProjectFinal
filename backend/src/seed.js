@@ -119,21 +119,21 @@ async function seed() {
     name: 'ຫ້ອງນ້ອຍ',
     description: 'ເໝາະສຳລັບກຸ່ມນ້ອຍ 2–4 ຄົນ',
     capacity: 4,
-    price_per_hour: 300,
+    price_per_hour: 30, // ราคาต่ำไว้ก่อน เพราะ PhaJay test key (ยังไม่ KYC) จำกัดโอนได้แค่ 1-999 กีบ/ครั้ง
     amenities: 'ໄມໂຄຣໂຟນ 2 ອັນ, ຈໍໂທລະທັດ 55", ລະບົບສຽງຄຸນນະພາບສູງ',
   });
   const medium = await RoomType.create({
     name: 'ຫ້ອງກາງ',
     description: 'ເໝາະສຳລັບກຸ່ມ 5–8 ຄົນ',
     capacity: 8,
-    price_per_hour: 500,
+    price_per_hour: 60,
     amenities: 'ໄມໂຄຣໂຟນ 4 ອັນ, ຈໍໂທລະທັດ 65", ລະບົບສຽງ Surround',
   });
   const large = await RoomType.create({
     name: 'ຫ້ອງໃຫຍ່',
     description: 'ເໝາະສຳລັບປາຕີ 9–15 ຄົນ',
     capacity: 15,
-    price_per_hour: 800,
+    price_per_hour: 100,
     amenities: 'ໄມໂຄຣໂຟນ 6 ອັນ, ຈໍໂທລະທັດ 75", ລະບົບສຽງ Premium, ໂຊຟາ VIP',
   });
   console.log('Room types seeded');
@@ -153,29 +153,29 @@ async function seed() {
   await Booking.create({
     u_id: memberUser.u_id, r_id: rooms['S'].r_id,
     start_time: d(24), end_time: d(26), guests: 3,
-    total_price: 600, deposit_amount: 0, status: 'pending',
+    total_price: 60, deposit_amount: 0, status: 'pending',
   });
 
   // M → confirmed (จ่ายมัดจำแล้ว รอ check-in)
   const b2 = await Booking.create({
     u_id: memberUser2.u_id, r_id: rooms['M'].r_id,
     start_time: d(2), end_time: d(4), guests: 5,
-    total_price: 1000, deposit_amount: 300,
+    total_price: 120, deposit_amount: 36,
     status: 'confirmed',
   });
   await Payment.create({
-    b_id: b2.b_id, amount: 300, type: 'deposit', method: 'QR', status: 'confirmed',
+    b_id: b2.b_id, amount: 36, type: 'deposit', method: 'QR', status: 'confirmed',
   });
 
   // L → checked_in (กำลังใช้งาน)
   const b3 = await Booking.create({
     u_id: memberUser.u_id, r_id: rooms['L'].r_id,
     start_time: d(-1), end_time: d(2), guests: 10,
-    total_price: 2400, deposit_amount: 800,
+    total_price: 300, deposit_amount: 90,
     status: 'checked_in', actual_check_in: d(-1),
   });
   await Payment.create({
-    b_id: b3.b_id, amount: 800, type: 'deposit', method: 'QR', status: 'confirmed',
+    b_id: b3.b_id, amount: 90, type: 'deposit', method: 'QR', status: 'confirmed',
   });
   await Room.update({ status: 'occupied' }, { where: { r_id: rooms['L'].r_id } });
 
@@ -183,15 +183,15 @@ async function seed() {
   const b4 = await Booking.create({
     u_id: memberUser2.u_id, r_id: rooms['S'].r_id,
     start_time: d(-50), end_time: d(-48), guests: 2,
-    total_price: 600, deposit_amount: 200,
+    total_price: 60, deposit_amount: 18,
     status: 'completed',
     actual_check_in: d(-50), actual_check_out: d(-48),
   });
   await Payment.create({
-    b_id: b4.b_id, amount: 200, type: 'deposit', method: 'QR', status: 'confirmed',
+    b_id: b4.b_id, amount: 18, type: 'deposit', method: 'QR', status: 'confirmed',
   });
   await Payment.create({
-    b_id: b4.b_id, amount: 400, type: 'final', method: 'cash', status: 'confirmed',
+    b_id: b4.b_id, amount: 42, type: 'final', method: 'cash', status: 'confirmed',
   });
   await Review.create({
     b_id: b4.b_id, u_id: memberUser2.u_id, r_id: rooms['S'].r_id,
