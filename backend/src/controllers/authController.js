@@ -56,7 +56,7 @@ const login = async (req, res) => {
     });
 
     if (!user || !(await bcrypt.compare(password, user.password))) {
-      return res.status(401).json({ message: 'ອີເມລຫຼືລະຫັດຜ່ານບໍ່ຖືກຕ້ອງ' });
+      return res.status(401).json({ message: 'ອີເມລ ຫຼື ລະຫັດຜ່ານ ບໍ່ຖືກຕ້ອງ' });
     }
 
     if (['admin', 'staff'].includes(user.role)) {
@@ -67,7 +67,7 @@ const login = async (req, res) => {
       const token = signToken({ id: user.u_id, role: user.role, employeeId: emp.emp_id });
       return res.json({
         token,
-        user: { id: user.u_id, name: emp.name, email: user.email, role: user.role, employeeId: emp.emp_id },
+        user: { id: user.u_id, fname: emp.fname, lname: emp.lname, email: user.email, role: user.role, employeeId: emp.emp_id },
       });
     }
 
@@ -102,7 +102,7 @@ const employeeLogin = async (req, res) => {
     });
 
     if (!user || !(await bcrypt.compare(password, user.password))) {
-      return res.status(401).json({ message: 'ອີເມລຫຼືລະຫັດຜ່ານບໍ່ຖືກຕ້ອງ' });
+      return res.status(401).json({ message: 'ອີເມລ ຫຼື ລະຫັດຜ່ານ ບໍ່ຖືກຕ້ອງ' });
     }
     if (!['admin', 'staff'].includes(user.role)) {
       return res.status(403).json({ message: 'ບໍ່ມີສິດເຂົ້າໜ້ານີ້' });
@@ -115,7 +115,7 @@ const employeeLogin = async (req, res) => {
     const token = signToken({ id: user.u_id, role: user.role, employeeId: emp.emp_id });
     return res.json({
       token,
-      user: { id: user.u_id, name: emp.name, email: user.email, role: user.role, employeeId: emp.emp_id },
+      user: { id: user.u_id, fname: emp.fname, lname: emp.lname, email: user.email, role: user.role, employeeId: emp.emp_id },
     });
   } catch (err) {
     return res.status(500).json({ message: err.message });
@@ -127,7 +127,7 @@ const me = async (req, res) => {
   try {
     if (['admin', 'staff'].includes(req.user.role)) {
       const emp = await Employee.findByPk(req.user.employeeId, {
-        attributes: ['emp_id', 'name', 'phone', 'position', 'gender', 'birthday', 'status', 'hire_date'],
+        attributes: ['emp_id', 'fname', 'lname', 'phone', 'position', 'gender', 'birthday', 'status', 'hire_date'],
         include: [{ model: User, as: 'user', attributes: ['u_id', 'email', 'role'] }],
       });
       if (!emp) return res.status(404).json({ message: 'ບໍ່ພົບບັນຊີນີ້' });
@@ -136,7 +136,8 @@ const me = async (req, res) => {
         employeeId: emp.emp_id,
         email: emp.user.email,
         role: emp.user.role,
-        name: emp.name,
+        fname: emp.fname,
+        lname: emp.lname,
         phone: emp.phone,
         position: emp.position,
         gender: emp.gender,
@@ -166,7 +167,7 @@ const me = async (req, res) => {
 // PUT /auth/profile
 const updateProfile = async (req, res) => {
   try {
-    const { fname, lname, name, phone, gender, birthday, address, password, new_password } = req.body;
+    const { fname, lname, phone, gender, birthday, address, password, new_password } = req.body;
 
     if (['admin', 'staff'].includes(req.user.role)) {
       const emp = await Employee.findByPk(req.user.employeeId);
@@ -174,8 +175,8 @@ const updateProfile = async (req, res) => {
       const user = await User.findByPk(req.user.id);
 
       const empUpdates = {};
-      const newName = fname || name;
-      if (newName !== undefined) empUpdates.name = newName || emp.name;
+      if (fname !== undefined) empUpdates.fname = fname;
+      if (lname !== undefined) empUpdates.lname = lname;
       if (phone !== undefined) empUpdates.phone = phone;
       if (gender !== undefined) empUpdates.gender = gender || null;
       if (birthday !== undefined) empUpdates.birthday = birthday || null;
@@ -193,7 +194,8 @@ const updateProfile = async (req, res) => {
         employeeId: emp.emp_id,
         email: user.email,
         role: user.role,
-        name: emp.name,
+        fname: emp.fname,
+        lname: emp.lname,
         phone: emp.phone,
         gender: emp.gender,
         birthday: emp.birthday,
