@@ -10,10 +10,13 @@ api.interceptors.request.use((config) => {
   return config;
 });
 
+const AUTH_ENDPOINTS = ['/auth/login', '/auth/employee/login', '/auth/register'];
+
 api.interceptors.response.use(
   (res) => res,
   (err) => {
-    if (err.response?.status === 401) {
+    const isAuthRequest = AUTH_ENDPOINTS.some((path) => err.config?.url?.includes(path));
+    if (err.response?.status === 401 && !isAuthRequest) {
       localStorage.removeItem('token');
       window.location.href = '/login';
     }
