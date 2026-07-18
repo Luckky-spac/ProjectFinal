@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import api from '../api/axios';
 
@@ -20,17 +20,12 @@ function formatDateTime(iso) {
   });
 }
 
-// QR mock image placeholder
-function QRMock({ amount }) {
+// QR ຊຳລະເງິນຈິງຈາກ PhaJay (BCEL One) — สแกนผ่านแอปธนาคารได้จริง
+function QRPayment({ amount, qrImage }) {
   return (
     <div className="flex flex-col items-center bg-white border-2 border-dashed border-gray-300 rounded-xl p-4 gap-2">
-      <div className="w-32 h-32 bg-gray-100 rounded-lg flex items-center justify-center border border-gray-200">
-        <div className="text-center">
-          <div className="text-4xl">▣</div>
-          <p className="text-xs text-gray-400 mt-1">QR Code</p>
-        </div>
-      </div>
-      <p className="text-xs text-gray-500">ສະແກນ QR ເພື່ອໂອນ</p>
+      <img src={qrImage} alt="QR ຊຳລະເງິນ" className="w-48 h-48 object-contain" />
+      <p className="text-xs text-gray-500">ສະແກນດ້ວຍແອັບທະນາຄານເພື່ອຈ່າຍ (BCEL One)</p>
       <p className="text-sm font-bold text-[#7B2438]">฿{Number(amount).toLocaleString()}</p>
     </div>
   );
@@ -42,31 +37,53 @@ function PaymentForm({ booking, type, onSuccess }) {
     ? Math.ceil(parseFloat(booking.total_price) * 0.3)
     : parseFloat(booking.total_price) - parseFloat(booking.deposit_amount || 0);
 
-  const [amount, setAmount] = useState(String(suggested));
+  const pendingQrPayment = booking.payments?.find((p) => p.type === type && p.status === 'pending' && p.method === 'QR');
+
+  const [amount, setAmount] = useState(String(pendingQrPayment ? pendingQrPayment.amount : suggested));
   const [method, setMethod] = useState('QR');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [cashSent, setCashSent] = useState(false);
+  // ถ้ามี QR ที่เจนไว้แล้วรออยู่ (เช่น refresh หน้า/เปิดแท็บใหม่) ให้ดึงกลับมาโชว์ต่อ ไม่ใช่เริ่มใหม่
+  const [qrInfo, setQrInfo] = useState(() =>
+    pendingQrPayment ? { qrImage: pendingQrPayment.qr_image, payId: pendingQrPayment.pay_id } : null
+  );
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
+  // poll booking ทุก 3 วิ รอ PhaJay ยืนยันว่าจ่ายจริงผ่าน socket แล้วค่อย auto-confirm
+  useEffect(() => {
+    if (!qrInfo) return undefined;
+    const interval = setInterval(async () => {
+      try {
+        const res = await api.get(`/bookings/${booking.b_id}`);
+        const payment = res.data.payments?.find((p) => p.pay_id === qrInfo.payId);
+        if (payment?.status === 'confirmed') {
+          clearInterval(interval);
+          onSuccess(res.data);
+        }
+      } catch {
+        // เงียบไว้ รอ poll รอบหน้า
+      }
+    }, 3000);
+    return () => clearInterval(interval);
+  }, [qrInfo, booking.b_id, onSuccess]);
+
+  const handleGenerateQr = useCallback(async () => {
     setError('');
     if (!amount || parseFloat(amount) <= 0) { setError('ກະລຸນາລະບຸຈຳນວນເງິນ'); return; }
     setLoading(true);
     try {
-      const res = await api.post('/payments', {
+      const res = await api.post('/payments/qr/generate', {
         booking_id: booking.b_id,
         amount: parseFloat(amount),
         type,
-        method,
       });
-      onSuccess(res.data.booking);
+      setQrInfo({ qrImage: res.data.qrImage, payId: res.data.payment.pay_id });
     } catch (err) {
-      setError(err.response?.data?.message || 'ເກີດຂໍ້ຜິດພາດ');
+      setError(err.response?.data?.message || 'ສ້າງ QR ລົ້ມເຫລວ ກະລຸນາລອງໃໝ່');
     } finally {
       setLoading(false);
     }
-  };
+  }, [amount, booking.b_id, type]);
 
   const handleCash = async () => {
     setError('');
@@ -106,10 +123,10 @@ function PaymentForm({ booking, type, onSuccess }) {
       {isDeposit && (
         <div className="flex gap-2 items-center">
           <input
-            type="number" min="1" value={amount}
+            type="number" min="1" value={amount} disabled={!!qrInfo}
             onChange={(e) => setAmount(e.target.value)}
             placeholder={`ແນະນຳ ฿${Number(suggested).toLocaleString()} (30%)`}
-            className="border rounded-lg px-3 py-1.5 text-sm flex-1"
+            className="border rounded-lg px-3 py-1.5 text-sm flex-1 disabled:bg-gray-100"
           />
           <span className="text-xs text-gray-500">ບາດ</span>
         </div>
@@ -117,26 +134,36 @@ function PaymentForm({ booking, type, onSuccess }) {
 
       {/* Method selector */}
       <div className="flex gap-2">
-        <button type="button" onClick={() => setMethod('QR')}
-          className={`flex-1 py-1.5 rounded-lg text-sm font-semibold border transition ${method === 'QR' ? 'bg-[#7B2438] text-white border-[#7B2438]' : 'bg-white text-gray-600 border-gray-300'}`}>
+        <button type="button" onClick={() => setMethod('QR')} disabled={!!qrInfo}
+          className={`flex-1 py-1.5 rounded-lg text-sm font-semibold border transition disabled:opacity-50 ${method === 'QR' ? 'bg-[#7B2438] text-white border-[#7B2438]' : 'bg-white text-gray-600 border-gray-300'}`}>
           QR Code
         </button>
-        <button type="button" onClick={() => setMethod('cash')}
-          className={`flex-1 py-1.5 rounded-lg text-sm font-semibold border transition ${method === 'cash' ? 'bg-[#7B2438] text-white border-[#7B2438]' : 'bg-white text-gray-600 border-gray-300'}`}>
+        <button type="button" onClick={() => setMethod('cash')} disabled={!!qrInfo}
+          className={`flex-1 py-1.5 rounded-lg text-sm font-semibold border transition disabled:opacity-50 ${method === 'cash' ? 'bg-[#7B2438] text-white border-[#7B2438]' : 'bg-white text-gray-600 border-gray-300'}`}>
           ເງິນສົດ
         </button>
       </div>
 
       {method === 'QR' && (
-        <form onSubmit={handleSubmit} className="flex flex-col gap-3">
-          <QRMock amount={isDeposit ? amount : suggested} />
-          <p className="text-xs text-gray-500 text-center">ສະແກນ QR ຂ້າງເທິງ ຈາກນັ້ນກົດປຸ່ມຢືນຢັນ</p>
-          {error && <p className="text-red-500 text-xs">{error}</p>}
-          <button type="submit" disabled={loading}
-            className="py-2 bg-[#7B2438] text-white rounded-lg text-sm font-semibold hover:bg-rose-900 disabled:opacity-50">
-            {loading ? 'ກຳລັງດຳເນີນການ...' : 'ຢືນຢັນການຊຳລະ QR'}
-          </button>
-        </form>
+        <div className="flex flex-col gap-3">
+          {!qrInfo ? (
+            <>
+              {error && <p className="text-red-500 text-xs">{error}</p>}
+              <button type="button" onClick={handleGenerateQr} disabled={loading}
+                className="py-2 bg-[#7B2438] text-white rounded-lg text-sm font-semibold hover:bg-rose-900 disabled:opacity-50">
+                {loading ? 'ກຳລັງສ້າງ QR...' : 'ສ້າງ QR ຊຳລະເງິນ'}
+              </button>
+            </>
+          ) : (
+            <>
+              <QRPayment amount={isDeposit ? amount : suggested} qrImage={qrInfo.qrImage} />
+              <p className="text-xs text-gray-500 text-center flex items-center justify-center gap-1.5">
+                <span className="inline-block w-2 h-2 rounded-full bg-yellow-400 animate-pulse" />
+                ລໍການຊຳລະເງິນ... ລະບົບຈະຢືນຢັນອັດຕະໂນມັດເມື່ອຈ່າຍສຳເລັດ
+              </p>
+            </>
+          )}
+        </div>
       )}
 
       {method === 'cash' && (
@@ -228,13 +255,18 @@ function BookingCard({ booking, isNew, onUpdate }) {
   const cfg = STATUS_CONFIG[booking.status] || { text: booking.status, cls: 'bg-gray-100 text-gray-500' };
   const hours = ((new Date(booking.end_time) - new Date(booking.start_time)) / 3600000).toFixed(1);
 
-  const hasPendingDeposit = booking.payments?.some((p) => p.type === 'deposit' && p.status === 'pending');
+  const pendingDeposit = booking.payments?.find((p) => p.type === 'deposit' && p.status === 'pending');
+  const hasPendingCashDeposit = pendingDeposit?.method === 'cash';
+  const hasPendingQrDeposit = pendingDeposit?.method === 'QR';
   const hasConfirmedDeposit = booking.payments?.some((p) => p.type === 'deposit' && p.status === 'confirmed');
-  const hasPendingFinalPayment = booking.payments?.some((p) => p.type === 'final' && p.status === 'pending');
+
+  const pendingFinal = booking.payments?.find((p) => p.type === 'final' && p.status === 'pending');
+  const hasPendingCashFinal = pendingFinal?.method === 'cash';
+  const hasPendingQrFinal = pendingFinal?.method === 'QR';
   const hasConfirmedFinalPayment = booking.payments?.some((p) => p.type === 'final' && p.status === 'confirmed');
 
-  const [showDeposit, setShowDeposit] = useState(false);
-  const [showPayment, setShowPayment] = useState(false);
+  const [showDeposit, setShowDeposit] = useState(hasPendingQrDeposit);
+  const [showPayment, setShowPayment] = useState(hasPendingQrFinal);
   const [showExtend, setShowExtend] = useState(false);
   const [actionLoading, setActionLoading] = useState(false);
 
@@ -294,7 +326,7 @@ function BookingCard({ booking, isNew, onUpdate }) {
       </div>
 
       {/* pending — ຈ່າຍມັດຈຳ */}
-      {booking.status === 'pending' && !hasConfirmedDeposit && !hasPendingDeposit && (
+      {booking.status === 'pending' && !hasConfirmedDeposit && !hasPendingCashDeposit && (
         <>
           <button onClick={() => setShowDeposit((v) => !v)}
             className="text-sm py-2 bg-yellow-500 text-white rounded-xl font-semibold hover:bg-yellow-600">
@@ -307,7 +339,7 @@ function BookingCard({ booking, isNew, onUpdate }) {
         </>
       )}
 
-      {booking.status === 'pending' && hasPendingDeposit && (
+      {booking.status === 'pending' && hasPendingCashDeposit && (
         <div className="text-xs text-yellow-700 bg-yellow-50 rounded-lg px-3 py-2">
           ແຈ້ງຊຳລະເງິນສົດແລ້ວ — ລໍພະນັກງານຢືນຢັນ
         </div>
@@ -330,7 +362,7 @@ function BookingCard({ booking, isNew, onUpdate }) {
       {/* checked_in — ຊຳລະສ່ວນທີ່ເຫຼືອ + ຕໍ່ເວລາ + check-out */}
       {booking.status === 'checked_in' && (
         <>
-          {!hasPendingFinalPayment && !hasConfirmedFinalPayment && (
+          {!hasPendingCashFinal && !hasConfirmedFinalPayment && (
             <>
               <button onClick={() => setShowPayment((v) => !v)}
                 className="text-sm py-2 bg-green-600 text-white rounded-xl font-semibold hover:bg-green-700">
@@ -342,7 +374,7 @@ function BookingCard({ booking, isNew, onUpdate }) {
               )}
             </>
           )}
-          {hasPendingFinalPayment && (
+          {hasPendingCashFinal && (
             <div className="text-xs text-green-700 bg-green-50 rounded-lg px-3 py-2">
               ແຈ້ງຊຳລະເງິນສົດແລ້ວ — ລໍພະນັກງານຢືນຢັນ
             </div>
