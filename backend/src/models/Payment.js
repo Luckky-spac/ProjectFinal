@@ -8,6 +8,8 @@ const Payment = sequelize.define('Payment', {
   type:         { type: DataTypes.ENUM('deposit', 'final'), allowNull: false },
   method:       { type: DataTypes.ENUM('cash', 'QR'), defaultValue: 'QR' },
   status:       { type: DataTypes.ENUM('pending', 'confirmed', 'rejected'), defaultValue: 'pending' },
+  transaction_id: { type: DataTypes.STRING(100) },
+  qr_image:     { type: DataTypes.TEXT('long') },
 }, {
   tableName: 'payments',
   timestamps: true,
