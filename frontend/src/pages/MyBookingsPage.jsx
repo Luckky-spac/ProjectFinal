@@ -334,7 +334,7 @@ function BookingCard({ booking, isNew, onUpdate }) {
             <>
               <button onClick={() => setShowPayment((v) => !v)}
                 className="text-sm py-2 bg-green-600 text-white rounded-xl font-semibold hover:bg-green-700">
-                {showPayment ? 'ຊ່ອນ' : 'ຊຳລະເງິນສ່ວນທີ່ເຫຼືອ'}
+                {showPayment ? 'ເກັບແທັບ' : 'ຊຳລະເງິນສ່ວນທີ່ເຫຼືອ'}
               </button>
               {showPayment && (
                 <PaymentForm booking={booking} type="final"
@@ -349,7 +349,7 @@ function BookingCard({ booking, isNew, onUpdate }) {
           )}
           <button onClick={() => setShowExtend((v) => !v)}
             className="text-sm py-2 bg-blue-100 text-blue-700 rounded-xl font-semibold hover:bg-blue-200">
-            {showExtend ? 'ຊ່ອນ' : 'ຕໍ່ເວລາການໃຊ້ຫ້ອງ'}
+            {showExtend ? 'ເກັບແທັບ' : 'ຕໍ່ເວລາການໃຊ້ຫ້ອງ'}
           </button>
           {showExtend && <ExtendForm booking={booking} onSuccess={(updated) => { onUpdate(updated); setShowExtend(false); }} />}
           <button onClick={doCheckout} disabled={actionLoading}
