@@ -230,11 +230,11 @@ const deleteEmployee = async (req, res) => {
 
 const createRoomType = async (req, res) => {
   try {
-    const { name, description, capacity, price_per_hour } = req.body;
+    const { name, description, capacity, price_per_hour, overtime_price_per_hour } = req.body;
     if (!name || !price_per_hour) {
       return res.status(400).json({ message: 'name ແລະ price_per_hour ຈຳເປັນຕ້ອງກອກ' });
     }
-    const rt = await RoomType.create({ name, description, capacity, price_per_hour });
+    const rt = await RoomType.create({ name, description, capacity, price_per_hour, overtime_price_per_hour });
     res.status(201).json(rt);
   } catch (err) {
     res.status(500).json({ message: err.message });
@@ -245,8 +245,8 @@ const updateRoomType = async (req, res) => {
   try {
     const rt = await RoomType.findByPk(req.params.id);
     if (!rt) return res.status(404).json({ message: 'ບໍ່ພົບປະເພດຫ້ອງນີ້' });
-    const { name, description, capacity, price_per_hour } = req.body;
-    await rt.update({ name, description, capacity, price_per_hour });
+    const { name, description, capacity, price_per_hour, overtime_price_per_hour } = req.body;
+    await rt.update({ name, description, capacity, price_per_hour, overtime_price_per_hour });
     res.json(rt);
   } catch (err) {
     res.status(500).json({ message: err.message });

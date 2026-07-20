@@ -488,7 +488,7 @@ function RoomsTab() {
 }
 
 // ─── RoomTypes Tab ────────────────────────────────────────────────────────────
-const EMPTY_TYPE = { name: '', description: '', capacity: '4', price_per_hour: '' };
+const EMPTY_TYPE = { name: '', description: '', capacity: '4', price_per_hour: '', overtime_price_per_hour: '' };
 
 function RoomTypesTab() {
   const [types, setTypes] = useState([]);
@@ -504,7 +504,7 @@ function RoomTypesTab() {
 
   const onChange = (e) => setForm((f) => ({ ...f, [e.target.name]: e.target.value }));
   const startAdd = () => { setAdding(true); setEditing(null); setForm(EMPTY_TYPE); };
-  const startEdit = (t) => { setEditing(t.rtype_id); setAdding(false); setForm({ name: t.name, description: t.description || '', capacity: String(t.capacity), price_per_hour: String(t.price_per_hour) }); };
+  const startEdit = (t) => { setEditing(t.rtype_id); setAdding(false); setForm({ name: t.name, description: t.description || '', capacity: String(t.capacity), price_per_hour: String(t.price_per_hour), overtime_price_per_hour: String(t.overtime_price_per_hour) }); };
 
   const save = async () => {
     setLoading(true);
@@ -537,6 +537,7 @@ function RoomTypesTab() {
             <Field label="ຊື່ປະເພດ" name="name" value={form.name} onChange={onChange} required />
             <Field label="ຄວາມຈຸ (ຄົນ)" name="capacity" type="number" value={form.capacity} onChange={onChange} />
             <Field label="ລາຄາ/ຊົ່ວໂມງ (ບາດ)" name="price_per_hour" type="number" value={form.price_per_hour} onChange={onChange} required />
+            <Field label="ລາຄາຕໍ່ ຊມ. ເມື່ອເກີນເວລາ (ບາດ)" name="overtime_price_per_hour" type="number" value={form.overtime_price_per_hour} onChange={onChange} required />
             <Field label="ຄຳອະທິບາຍ" name="description" value={form.description} onChange={onChange} />
           </div>
           <div className="flex gap-2">
@@ -549,7 +550,7 @@ function RoomTypesTab() {
         <table className="w-full text-sm">
           <thead><tr className="text-left text-gray-400 border-b text-xs">
             <th className="pb-2 pr-4">ຊື່</th><th className="pb-2 pr-4">ຄວາມຈຸ</th>
-            <th className="pb-2 pr-4">ລາຄາ/ຊມ.</th><th className="pb-2">ຈັດການ</th>
+            <th className="pb-2 pr-4">ລາຄາ/ຊມ.</th><th className="pb-2 pr-4">ລາຄາເກີນເວລາ/ຊມ.</th><th className="pb-2">ຈັດການ</th>
           </tr></thead>
           <tbody>
             {types.map((t) => (
@@ -557,6 +558,7 @@ function RoomTypesTab() {
                 <td className="py-2 pr-4 font-medium">{t.name}</td>
                 <td className="py-2 pr-4 text-gray-500">{t.capacity} ຄົນ</td>
                 <td className="py-2 pr-4 text-gray-500">฿{Number(t.price_per_hour).toLocaleString()}</td>
+                <td className="py-2 pr-4 text-gray-500">฿{Number(t.overtime_price_per_hour).toLocaleString()}</td>
                 <td className="py-2 flex gap-2">
                   <Btn small label="ແກ້ໄຂ" color="gray" onClick={() => startEdit(t)} />
                   <Btn small label="ລົບ" color="red" onClick={() => del(t.rtype_id)} />
