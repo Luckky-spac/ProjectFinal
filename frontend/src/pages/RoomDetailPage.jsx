@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { FaArrowLeft, FaMicrophone, FaUser, FaCoins, FaBuilding, FaStar, FaMagic, FaClipboardList } from 'react-icons/fa';
+import { FaArrowLeft, FaMicrophone, FaUser, FaCoins, FaBuilding, FaStar, FaClipboardList } from 'react-icons/fa';
 import api from '../api/axios';
 
 function StarRow({ rating }) {
@@ -129,14 +129,6 @@ export default function RoomDetailPage() {
             )}
           </div>
         </div>
-
-        {/* Amenities */}
-        {room.roomType?.amenities && (
-          <div className="bg-white rounded-2xl shadow-sm p-5 mb-4 border border-rose-100">
-            <h2 className="font-semibold text-gray-700 mb-2 flex items-center gap-2"><FaMagic /> ສິ່ງອຳນວຍຄວາມສະດວກ</h2>
-            <p className="text-sm text-gray-600">{room.roomType.amenities}</p>
-          </div>
-        )}
 
         {/* Description */}
         {room.roomType?.description && (

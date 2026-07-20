@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
-import { FaArrowLeft, FaPen, FaUser, FaClock, FaUsers, FaCalendarAlt, FaStopwatch, FaHome, FaTimes, FaSave, FaMicrophone } from 'react-icons/fa';
+import { FaArrowLeft, FaPen, FaUser, FaClock, FaCalendarAlt, FaStopwatch, FaHome, FaTimes, FaSave, FaMicrophone } from 'react-icons/fa';
 import api from '../api/axios';
 import { useAuth } from '../context/AuthContext';
 
@@ -54,7 +54,6 @@ export default function BookingPage() {
     }
     return '1';
   });
-  const [guests, setGuests] = useState('1');
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState('');
 
@@ -130,7 +129,6 @@ export default function BookingPage() {
         room_id: roomId,
         start_time: startISO,
         end_time: endISO,
-        guests: parseInt(guests),
       });
       navigate('/my-bookings', { state: { newBookingId: res.data.b_id } });
     } catch (err) {
@@ -236,19 +234,7 @@ export default function BookingPage() {
             </div>
             <p className="text-rose-300 text-xs -mt-2">ຮ້ານເປີດໃຫ້ບໍລິການ 12:00 - 01:00</p>
 
-            {/* Row 2: จำนวนคน */}
-            <div>
-              <label className="text-rose-200 text-xs font-medium flex items-center gap-1 mb-1">
-                <FaUsers /> ຈຳນວນຜູ້ໃຊ້
-              </label>
-              <input
-                type="number" min={1} max={room.roomType?.capacity || 20}
-                value={guests} onChange={(e) => setGuests(e.target.value)}
-                className="w-full bg-white border border-rose-300 text-gray-800 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-rose-300"
-              />
-            </div>
-
-            {/* Row 3: วันที่ + ชั่วโมง */}
+            {/* Row 2: วันที่ + ชั่วโมง */}
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <label className="text-rose-200 text-xs font-medium flex items-center gap-1 mb-1">

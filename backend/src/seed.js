@@ -117,32 +117,32 @@ async function seed() {
   // ─── Room Types ───────────────────────────────────────────────────────────
   const small = await RoomType.create({
     name: 'ຫ້ອງນ້ອຍ',
-    description: 'ເໝາະສຳລັບກຸ່ມນ້ອຍ 2–4 ຄົນ',
-    capacity: 4,
-    price_per_hour: 199,
+    description: 'ເບຍລາວ 330ml 24ແກ້ວ ຫຼື ເບຍ Heineken 12 ແກ້ວ, ໂຄກ ຫຼື ແປບຊີ 12 ກະປ໋ອງ, ໝາກໄມ້ລວມ 2 ຈານ ແລະ ຂອງກິນວ່າງ 4 ຢ່າງ/ຊະນິດ. ທຸກຫ້ອງຮ້ອງເພງຈະມີນ້ຳດື່ມ 12ຕຸກໃຫ້ຟຣີ. ບັນຈຸໄດ້ 10-15ທ່ານ. ຖ້າຈອງ 4ຊົ່ວໂມງ ຈະໄດ້ ທຸກຢ່າງທີ່ໄດ້ກ່າວມາຂ້າງຕົ້ນ.',
+    capacity: 15,
+    price_per_hour: 42,
     amenities: 'ໄມໂຄຣໂຟນ 2 ອັນ, ຈໍໂທລະທັດ 55", ລະບົບສຽງຄຸນນະພາບສູງ',
   });
   const medium = await RoomType.create({
     name: 'ຫ້ອງກາງ',
-    description: 'ເໝາະສຳລັບກຸ່ມ 5–8 ຄົນ',
-    capacity: 8,
-    price_per_hour: 588,
+    description: 'ໄດ້ຮັບ ເຫຼົ້າ Chivas 18 ຫຼື ເຫຼົ້າແວງແດງ Merlot 4 ແກ້ວ, ເບຍລາວ 330ml 24ແກ້ວ ຫຼື ເບຍ Heineken 12 ແກ້ວ, ໂຄກ ຫຼື ແປບຊີ 12 ກະປ໋ອງ, ໝາກໄມ້ລວມ 2 ຈານ ແລະ ຂອງກິນວ່າງ 4 ຢ່າງ/ຊະນິດ. ທຸກຫ້ອງຮ້ອງເພງຈະມີນ້ຳດື່ມ 12ຕຸກໃຫ້ຟຣີ. ບັນຈຸໄດ້ 15-20ທ່ານ. ຖ້າຈອງ 4ຊົ່ວໂມງ ຈະໄດ້ ທຸກຢ່າງທີ່ໄດ້ກ່າວມາຂ້າງຕົ້ນ.',
+    capacity: 20,
+    price_per_hour: 147,
     amenities: 'ໄມໂຄຣໂຟນ 4 ອັນ, ຈໍໂທລະທັດ 65", ລະບົບສຽງ Surround',
   });
   const large = await RoomType.create({
     name: 'ຫ້ອງໃຫຍ່',
-    description: 'ເໝາະສຳລັບປາຕີ 9–15 ຄົນ',
-    capacity: 15,
-    price_per_hour: 666,
+    description: 'ໄດ້ຮັບ ແຊມເປນ Moet 1 ແກ້ວ ຫຼື ເຫຼົ້າ VSOP Remy Martin 1 ແກ້ວ, ເຫຼົ້າ Johnnie Walker 1 ແກ້ວ ຫຼື ເຫຼົ້າ Chivas Regal 21 ຈຳນວນ 1 ແກ້ວ, ເບຍ 1664 ແບບເຢັ້ນສົດ 2 ຈັກ(30ແກ້ວ), ນ້ຳໂຊດາ 12 ແກ້ວ(320ml), ລວມມິດໝາກໄມ້ 2 ຊຸດ ແລະ ຂອງຫວານ 4 ຢ່າງ ເວລາຮ້ອງເພງ 4 ຊົ່ວໂມງ ຈຳກັດຂັ້ນຕ່ຳ. ທຸກຫ້ອງຮ້ອງເພງຈະມີນ້ຳດື່ມ 12ຕຸກໃຫ້ຟຣີ. ບັນຈຸໄດ້ 30-35ທ່ານ. ຖ້າຈອງ 4ຊົ່ວໂມງ ຈະໄດ້ ທຸກຢ່າງທີ່ໄດ້ກ່າວມາຂ້າງຕົ້ນ.',
+    capacity: 35,
+    price_per_hour: 166,
     amenities: 'ໄມໂຄຣໂຟນ 6 ອັນ, ຈໍໂທລະທັດ 75", ລະບົບສຽງ Premium, ໂຊຟາ VIP',
   });
   console.log('Room types seeded');
 
   // ─── Rooms ────────────────────────────────────────────────────────────────
   const rooms = {};
-  rooms['S'] = await Room.create({ room_number: 'S', rtype_id: small.rtype_id,  floor: 37, status: 'available' });
-  rooms['M'] = await Room.create({ room_number: 'M', rtype_id: medium.rtype_id, floor: 37, status: 'available' });
-  rooms['L'] = await Room.create({ room_number: 'L', rtype_id: large.rtype_id,  floor: 37, status: 'available' });
+  rooms['S'] = await Room.create({ room_number: 'S', rtype_id: small.rtype_id,  floor: 36, status: 'available' });
+  rooms['M'] = await Room.create({ room_number: 'M', rtype_id: medium.rtype_id, floor: 36, status: 'available' });
+  rooms['L'] = await Room.create({ room_number: 'L', rtype_id: large.rtype_id,  floor: 36, status: 'available' });
   console.log('Rooms seeded');
 
   // ─── Demo Bookings ────────────────────────────────────────────────────────
