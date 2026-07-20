@@ -119,30 +119,30 @@ async function seed() {
     name: 'ຫ້ອງນ້ອຍ',
     description: 'ເໝາະສຳລັບກຸ່ມນ້ອຍ 2–4 ຄົນ',
     capacity: 4,
-    price_per_hour: 30, // ราคาต่ำไว้ก่อน เพราะ PhaJay test key (ยังไม่ KYC) จำกัดโอนได้แค่ 1-999 กีบ/ครั้ง
+    price_per_hour: 199,
     amenities: 'ໄມໂຄຣໂຟນ 2 ອັນ, ຈໍໂທລະທັດ 55", ລະບົບສຽງຄຸນນະພາບສູງ',
   });
   const medium = await RoomType.create({
     name: 'ຫ້ອງກາງ',
     description: 'ເໝາະສຳລັບກຸ່ມ 5–8 ຄົນ',
     capacity: 8,
-    price_per_hour: 60,
+    price_per_hour: 588,
     amenities: 'ໄມໂຄຣໂຟນ 4 ອັນ, ຈໍໂທລະທັດ 65", ລະບົບສຽງ Surround',
   });
   const large = await RoomType.create({
     name: 'ຫ້ອງໃຫຍ່',
     description: 'ເໝາະສຳລັບປາຕີ 9–15 ຄົນ',
     capacity: 15,
-    price_per_hour: 100,
+    price_per_hour: 666,
     amenities: 'ໄມໂຄຣໂຟນ 6 ອັນ, ຈໍໂທລະທັດ 75", ລະບົບສຽງ Premium, ໂຊຟາ VIP',
   });
   console.log('Room types seeded');
 
   // ─── Rooms ────────────────────────────────────────────────────────────────
   const rooms = {};
-  rooms['S'] = await Room.create({ room_number: 'S', rtype_id: small.rtype_id,  floor: 1, status: 'available' });
-  rooms['M'] = await Room.create({ room_number: 'M', rtype_id: medium.rtype_id, floor: 1, status: 'available' });
-  rooms['L'] = await Room.create({ room_number: 'L', rtype_id: large.rtype_id,  floor: 1, status: 'available' });
+  rooms['S'] = await Room.create({ room_number: 'S', rtype_id: small.rtype_id,  floor: 37, status: 'available' });
+  rooms['M'] = await Room.create({ room_number: 'M', rtype_id: medium.rtype_id, floor: 37, status: 'available' });
+  rooms['L'] = await Room.create({ room_number: 'L', rtype_id: large.rtype_id,  floor: 37, status: 'available' });
   console.log('Rooms seeded');
 
   // ─── Demo Bookings ────────────────────────────────────────────────────────

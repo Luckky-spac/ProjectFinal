@@ -13,7 +13,12 @@ const getRooms = async (req, res) => {
 
     if (date && start_time && end_time) {
       const requestStart = new Date(`${date}T${start_time}:00`);
-      const requestEnd = new Date(`${date}T${end_time}:00`);
+      let requestEnd = new Date(`${date}T${end_time}:00`);
+
+      // ຮ້ານເປີດ 12:00 - 01:00 (ຂ້າມວັນ) — ຖ້າເວລາສິ້ນສຸດບໍ່ຫຼັງເວລາເລີ່ມ ໃຫ້ຖືວ່າຂ້າມໄປມື້ຖັດໄປ
+      if (!isNaN(requestStart) && !isNaN(requestEnd) && requestEnd <= requestStart) {
+        requestEnd = new Date(requestEnd.getTime() + 24 * 3600000);
+      }
 
       if (isNaN(requestStart) || isNaN(requestEnd) || requestStart >= requestEnd) {
         return res.status(400).json({ message: 'ວັນເວລາບໍ່ຖືກຕ້ອງ' });

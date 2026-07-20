@@ -7,6 +7,21 @@ const bookingIncludes = [
   { model: Payment, as: 'payments' },
 ];
 
+// ຮ້ານເປີດ 12:00 - 01:00 (ຂ້າມວັນ)
+const OPEN_HOUR = 12;
+const CLOSE_HOUR = 1;
+
+// ຄຳນວນເວລາປິດ (01:00 ຂອງມື້ຖັດໄປ) ອີງໃສ່ວັນທີ່ຂອງ start
+const closingTimeFor = (start) => {
+  const midnight = new Date(start.getFullYear(), start.getMonth(), start.getDate());
+  return new Date(midnight.getTime() + (24 + CLOSE_HOUR) * 3600000);
+};
+
+const isWithinBusinessHours = (start, end) => {
+  if (start.getHours() < OPEN_HOUR) return false;
+  return end <= closingTimeFor(start);
+};
+
 // POST /api/bookings  (ລູກຄ້າເທົ່ານັ້ນ)
 const createBooking = async (req, res) => {
   try {
@@ -21,6 +36,9 @@ const createBooking = async (req, res) => {
     const end = new Date(end_time);
     if (isNaN(start) || isNaN(end) || start >= end) {
       return res.status(400).json({ message: 'ວັນເວລາບໍ່ຖືກຕ້ອງ' });
+    }
+    if (!isWithinBusinessHours(start, end)) {
+      return res.status(400).json({ message: 'ຮ້ານເປີດໃຫ້ບໍລິການເວລາ 12:00 - 01:00 ເທົ່ານັ້ນ' });
     }
 
     const room = await Room.findByPk(room_id, {
@@ -238,6 +256,10 @@ const extendBooking = async (req, res) => {
     }
 
     const newEnd = new Date(new Date(booking.end_time).getTime() + Number(extra_hours) * 3600000);
+
+    if (newEnd > closingTimeFor(new Date(booking.start_time))) {
+      return res.status(400).json({ message: 'ບໍ່ສາມາດຕໍ່ເວລາເກີນ 01:00 (ເວລາປິດຮ້ານ)' });
+    }
 
     const overlap = await Booking.findOne({
       where: {
