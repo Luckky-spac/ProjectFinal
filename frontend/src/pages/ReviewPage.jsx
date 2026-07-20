@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { FaArrowLeft } from 'react-icons/fa';
 import api from '../api/axios';
 
 function StarRating({ value, onChange }) {
@@ -107,7 +108,7 @@ export default function ReviewPage() {
       <div className="fixed inset-0 bg-black/60 -z-10" />
       <div className="max-w-2xl mx-auto">
         <div className="flex items-center gap-3 mb-6">
-          <button onClick={() => navigate('/my-bookings')} className="text-white hover:text-rose-200 text-xl drop-shadow">←</button>
+          <button onClick={() => navigate('/my-bookings')} className="text-white hover:text-rose-200 text-xl drop-shadow"><FaArrowLeft /></button>
           <h1 className="text-2xl font-bold text-white drop-shadow">ລີວິວ</h1>
         </div>
 

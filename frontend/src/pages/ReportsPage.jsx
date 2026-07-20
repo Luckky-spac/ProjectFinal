@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { FaClipboardList, FaChartBar, FaHome } from 'react-icons/fa';
 import api from '../api/axios';
 import { useAuth } from '../context/AuthContext';
 
@@ -212,12 +213,12 @@ const TABS = [
 ];
 
 const SIDEBAR_NAV = [
-  { label: '📋 ການຈອງ', path: '/staff' },
-  { label: '📊 ລາຍງານ', path: '/reports' },
+  { icon: FaClipboardList, label: 'ການຈອງ', path: '/staff' },
+  { icon: FaChartBar, label: 'ລາຍງານ', path: '/reports' },
 ];
 
 const ADMIN_NAV = [
-  { label: '🏠 ຫ້ອງ / ສະມາຊິກ', path: '/admin' },
+  { icon: FaHome, label: 'ຫ້ອງ / ສະມາຊິກ', path: '/admin' },
 ];
 
 export default function ReportsPage() {
@@ -239,13 +240,13 @@ export default function ReportsPage() {
             <button
               key={item.path}
               onClick={() => navigate(item.path)}
-              className={`text-left px-5 py-3 text-sm font-medium transition border-l-4 ${
+              className={`text-left px-5 py-3 text-sm font-medium transition border-l-4 flex items-center gap-2 ${
                 item.path === '/reports'
                   ? 'bg-rose-900 text-white border-white'
                   : 'text-rose-300 border-transparent hover:bg-rose-900 hover:text-white'
               }`}
             >
-              {item.label}
+              <item.icon /> {item.label}
             </button>
           ))}
           {isAdmin && (
@@ -255,9 +256,9 @@ export default function ReportsPage() {
                 <button
                   key={item.path}
                   onClick={() => navigate(item.path)}
-                  className="text-left px-5 py-3 text-sm font-medium text-rose-300 border-l-4 border-transparent hover:bg-rose-900 hover:text-white transition"
+                  className="text-left px-5 py-3 text-sm font-medium text-rose-300 border-l-4 border-transparent hover:bg-rose-900 hover:text-white transition flex items-center gap-2"
                 >
-                  {item.label}
+                  <item.icon /> {item.label}
                 </button>
               ))}
             </>

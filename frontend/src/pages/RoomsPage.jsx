@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { FaCalendarAlt } from 'react-icons/fa';
 import api from '../api/axios';
 
 function RoomCard({ room, onBook }) {
@@ -23,7 +24,7 @@ function RoomCard({ room, onBook }) {
             {badge}
           </span>
         </div>
-        <span className="text-[#7B2438] text-xl">📅</span>
+        <FaCalendarAlt className="text-[#7B2438] text-xl" />
       </div>
 
       {/* Photo — 1 ช่อง */}
@@ -129,20 +130,20 @@ export default function RoomsPage() {
               className="border border-rose-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-rose-300"
             />
           </div>
-          <div className="flex flex-col gap-1">
+          <div className="flex flex-col gap-1 w-32">
             <label className="text-xs text-gray-500 font-medium">ເວລາເລີ່ມ</label>
             <input
-              type="time" value={startTime}
+              type="time" value={startTime} min="12:00" max="23:59"
               onChange={(e) => setStartTime(e.target.value)}
-              className="border border-rose-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-rose-300"
+              className="w-full border border-rose-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-rose-300"
             />
           </div>
-          <div className="flex flex-col gap-1">
+          <div className="flex flex-col gap-1 w-32">
             <label className="text-xs text-gray-500 font-medium">ເວລາສິ້ນສຸດ</label>
             <input
               type="time" value={endTime}
               onChange={(e) => setEndTime(e.target.value)}
-              className="border border-rose-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-rose-300"
+              className="w-full border border-rose-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-rose-300"
             />
           </div>
           <button
@@ -160,6 +161,9 @@ export default function RoomsPage() {
               ລີເຊັດ
             </button>
           )}
+          <p className="w-full text-xs text-gray-400">
+            ເປີດ 12ໂມງຕອນສວາຍ ຮອດ 1ໂມງກາງຄືນ (ຖ້າເວລາຈອງເກິນ 1ໂມງກາງຄືນຈະບໍ່ສາມາດຈອງໄດ້)
+          </p>
         </form>
 
         {filtered && !loading && (

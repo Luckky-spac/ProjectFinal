@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import { FaArrowLeft, FaMicrophone, FaUser, FaCoins, FaBuilding, FaStar, FaMagic, FaClipboardList } from 'react-icons/fa';
 import api from '../api/axios';
 
 function StarRow({ rating }) {
@@ -64,7 +65,7 @@ export default function RoomDetailPage() {
           onClick={() => navigate('/rooms')}
           className="text-sm text-white mb-4 hover:underline flex items-center gap-1 drop-shadow"
         >
-          ← ກັບໄປຫ້ອງທັງໝົດ
+          <FaArrowLeft /> ກັບໄປຫ້ອງທັງໝົດ
         </button>
 
         {/* Images — 2 ช่อง */}
@@ -76,7 +77,7 @@ export default function RoomDetailPage() {
                   <img src={url} alt={`ຫ້ອງ ${room.room_number} ຮູບ ${i+1}`} className="w-full h-full object-cover" />
                 ) : (
                   <>
-                    <span className="text-3xl">🎤</span>
+                    <FaMicrophone className="text-3xl" />
                     <span className="text-xs">ຮູບ {i+1}</span>
                   </>
                 )}
@@ -97,21 +98,21 @@ export default function RoomDetailPage() {
 
           <div className="grid grid-cols-2 gap-3 text-sm">
             <div className="flex items-center gap-2 text-gray-600">
-              <span className="text-lg">👤</span>
+              <FaUser className="text-lg" />
               <div>
                 <p className="text-xs text-gray-400">ຮອງຮັບ</p>
                 <p className="font-semibold">{room.roomType?.capacity} ທ່ານ</p>
               </div>
             </div>
             <div className="flex items-center gap-2 text-gray-600">
-              <span className="text-lg">💲</span>
+              <FaCoins className="text-lg" />
               <div>
                 <p className="text-xs text-gray-400">ລາຄາ</p>
                 <p className="font-semibold text-[#7B2438]">฿{Number(room.roomType?.price_per_hour).toLocaleString()}/ຊົ່ວໂມງ</p>
               </div>
             </div>
             <div className="flex items-center gap-2 text-gray-600">
-              <span className="text-lg">🏢</span>
+              <FaBuilding className="text-lg" />
               <div>
                 <p className="text-xs text-gray-400">ຊັ້ນ</p>
                 <p className="font-semibold">{room.floor}</p>
@@ -119,7 +120,7 @@ export default function RoomDetailPage() {
             </div>
             {avgRating && (
               <div className="flex items-center gap-2 text-gray-600">
-                <span className="text-lg">⭐</span>
+                <FaStar className="text-lg text-yellow-400" />
                 <div>
                   <p className="text-xs text-gray-400">ຄະແນນສະເລ່ຍ</p>
                   <p className="font-semibold">{avgRating} / 5 ({reviews.length} ລີວິວ)</p>
@@ -132,7 +133,7 @@ export default function RoomDetailPage() {
         {/* Amenities */}
         {room.roomType?.amenities && (
           <div className="bg-white rounded-2xl shadow-sm p-5 mb-4 border border-rose-100">
-            <h2 className="font-semibold text-gray-700 mb-2">✨ ສິ່ງອຳນວຍຄວາມສະດວກ</h2>
+            <h2 className="font-semibold text-gray-700 mb-2 flex items-center gap-2"><FaMagic /> ສິ່ງອຳນວຍຄວາມສະດວກ</h2>
             <p className="text-sm text-gray-600">{room.roomType.amenities}</p>
           </div>
         )}
@@ -140,7 +141,7 @@ export default function RoomDetailPage() {
         {/* Description */}
         {room.roomType?.description && (
           <div className="bg-white rounded-2xl shadow-sm p-5 mb-4 border border-rose-100">
-            <h2 className="font-semibold text-gray-700 mb-2">📋 ລາຍລະອຽດ</h2>
+            <h2 className="font-semibold text-gray-700 mb-2 flex items-center gap-2"><FaClipboardList /> ລາຍລະອຽດ</h2>
             <p className="text-sm text-gray-600 leading-relaxed">{room.roomType.description}</p>
           </div>
         )}

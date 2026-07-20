@@ -1,5 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { FaTools, FaChartBar, FaClipboardList, FaUser } from 'react-icons/fa';
+import PasswordInput from '../components/PasswordInput';
 import api from '../api/axios';
 import { useAuth } from '../context/AuthContext';
 
@@ -335,6 +337,10 @@ function Field({ label, name, value, onChange, type = 'text', required, options,
           className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-rose-300">
           {options.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
         </select>
+      ) : type === 'password' ? (
+        <PasswordInput name={name} value={value} onChange={onChange} required={required}
+          {...rest}
+          className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-rose-300" />
       ) : (
         <input name={name} type={type} value={value} onChange={onChange} required={required}
           {...rest}
@@ -511,8 +517,8 @@ function MembersPanel() {
 }
 
 const ADMIN_NAV = [
-  { label: '🛠 ຈັດການລະບົບ', path: '/admin' },
-  { label: '📊 ລາຍງານ', path: '/reports' },
+  { icon: FaTools, label: 'ຈັດການລະບົບ', path: '/admin' },
+  { icon: FaChartBar, label: 'ລາຍງານ', path: '/reports' },
 ];
 
 export default function StaffDashboardPage() {
@@ -561,11 +567,11 @@ export default function StaffDashboardPage() {
         <nav className="flex flex-col py-2">
           <button
             onClick={() => setView('bookings')}
-            className={`text-left px-5 py-3 text-sm font-medium transition border-l-4 ${
+            className={`text-left px-5 py-3 text-sm font-medium transition border-l-4 flex items-center gap-2 ${
               view === 'bookings' ? 'bg-rose-900 text-white border-white' : 'text-rose-300 border-transparent hover:bg-rose-900 hover:text-white'
             }`}
           >
-            📋 ການຈອງ
+            <FaClipboardList /> ການຈອງ
             {needAttention > 0 && (
               <span className="ml-2 bg-orange-500 text-white text-xs rounded-full px-1.5 py-0.5 font-bold">
                 {needAttention}
@@ -574,11 +580,11 @@ export default function StaffDashboardPage() {
           </button>
           <button
             onClick={() => setView('members')}
-            className={`text-left px-5 py-3 text-sm font-medium transition border-l-4 ${
+            className={`text-left px-5 py-3 text-sm font-medium transition border-l-4 flex items-center gap-2 ${
               view === 'members' ? 'bg-rose-900 text-white border-white' : 'text-rose-300 border-transparent hover:bg-rose-900 hover:text-white'
             }`}
           >
-            👤 ສະມາຊິກ
+            <FaUser /> ສະມາຊິກ
           </button>
           {isAdmin && (
             <>
@@ -587,9 +593,9 @@ export default function StaffDashboardPage() {
                 <button
                   key={item.label}
                   onClick={() => navigate(item.path)}
-                  className="text-left px-5 py-3 text-sm font-medium text-rose-300 border-l-4 border-transparent hover:bg-rose-900 hover:text-white transition"
+                  className="text-left px-5 py-3 text-sm font-medium text-rose-300 border-l-4 border-transparent hover:bg-rose-900 hover:text-white transition flex items-center gap-2"
                 >
-                  {item.label}
+                  <item.icon /> {item.label}
                 </button>
               ))}
             </>
@@ -603,7 +609,7 @@ export default function StaffDashboardPage() {
         {/* Members View */}
         {view === 'members' && (
           <div className="max-w-4xl">
-            <h1 className="text-2xl font-bold text-[#7B2438] mb-6">👤 ສະມາຊິກ</h1>
+            <h1 className="text-2xl font-bold text-[#7B2438] mb-6 flex items-center gap-2"><FaUser /> ສະມາຊິກ</h1>
             <MembersPanel />
           </div>
         )}

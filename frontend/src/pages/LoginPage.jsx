@@ -1,5 +1,7 @@
 import { useState } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
+import { FaMicrophone, FaEnvelope, FaLock } from 'react-icons/fa';
+import PasswordInput from '../components/PasswordInput';
 import { useAuth } from '../context/AuthContext';
 import api from '../api/axios';
 
@@ -36,7 +38,7 @@ export default function LoginPage() {
 
         {/* Logo / Header */}
         <div className="text-center mb-6">
-          <div className="text-4xl mb-2">🎤</div>
+          <FaMicrophone className="text-4xl mb-2 mx-auto text-[#7B2438]" />
           <h1 className="text-2xl font-bold text-[#7B2438]">LatsavongBook</h1>
           <p className="text-rose-400 text-sm mt-1">ເຂົ້າສູ່ລະບົບ</p>
         </div>
@@ -55,7 +57,7 @@ export default function LoginPage() {
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">📧 ອີເມລ</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1 flex items-center gap-1.5"><FaEnvelope /> ອີເມລ</label>
             <input
               type="email"
               name="email"
@@ -67,9 +69,8 @@ export default function LoginPage() {
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">🔒 ລະຫັດຜ່ານ</label>
-            <input
-              type="password"
+            <label className="block text-sm font-medium text-gray-700 mb-1 flex items-center gap-1.5"><FaLock /> ລະຫັດຜ່ານ</label>
+            <PasswordInput
               name="password"
               value={form.password}
               onChange={handleChange}

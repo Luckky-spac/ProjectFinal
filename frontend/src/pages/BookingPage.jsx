@@ -1,7 +1,28 @@
 import { useState, useEffect } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
+import { FaArrowLeft, FaPen, FaUser, FaClock, FaUsers, FaCalendarAlt, FaStopwatch, FaHome, FaTimes, FaSave, FaMicrophone } from 'react-icons/fa';
 import api from '../api/axios';
 import { useAuth } from '../context/AuthContext';
+
+// ຮ້ານເປີດ 12:00 - 01:00 (ຂ້າມວັນ)
+const OPEN_HOUR = 12;
+const CLOSE_HOUR = 1;
+
+// ຕົວເລືອກເວລາເລີ່ມ: 12:00 - 23:30 ທຸກໆ 30 ນາທີ
+const START_TIME_OPTIONS = Array.from({ length: (24 - OPEN_HOUR) * 2 }, (_, i) => {
+  const totalMin = OPEN_HOUR * 60 + i * 30;
+  const h = String(Math.floor(totalMin / 60)).padStart(2, '0');
+  const m = String(totalMin % 60).padStart(2, '0');
+  return `${h}:${m}`;
+});
+
+// ຈຳນວນຊົ່ວໂມງສູງສຸດທີ່ຈອງໄດ້ຈາກເວລາເລີ່ມ ໂດຍບໍ່ເກີນເວລາປິດ 01:00
+const maxHoursFor = (startTime) => {
+  const [h, m] = startTime.split(':').map(Number);
+  const startMin = h * 60 + m;
+  const closeMin = (24 + CLOSE_HOUR) * 60;
+  return Math.min(8, Math.max(1, Math.floor((closeMin - startMin) / 60)));
+};
 
 export default function BookingPage() {
   const [searchParams] = useSearchParams();
@@ -18,7 +39,9 @@ export default function BookingPage() {
   const [roomError, setRoomError] = useState('');
 
   const [date, setDate] = useState(preDate);
-  const [startTime, setStartTime] = useState(preStart);
+  const [startTime, setStartTime] = useState(
+    START_TIME_OPTIONS.includes(preStart) ? preStart : START_TIME_OPTIONS[0]
+  );
   const [hours, setHours] = useState(() => {
     if (preStart && preEnd) {
       const s = new Date(`2000-01-01T${preStart}`);
@@ -48,6 +71,15 @@ export default function BookingPage() {
       .catch(() => setRoomError('ບໍ່ພົບຫ້ອງທີ່ເລືອກ'))
       .finally(() => setLoadingRoom(false));
   }, [roomId]);
+
+  // ຮ້ານປິດ 01:00 ຂອງມື້ຖັດໄປ (ອີງໃສ່ວັນທີ່ເລືອກ)
+  const closingDateTime = (() => {
+    const midnight = new Date(`${date}T00:00:00`);
+    if (isNaN(midnight)) return null;
+    return new Date(midnight.getTime() + (24 + CLOSE_HOUR) * 3600000);
+  })();
+
+  const maxHours = maxHoursFor(startTime);
 
   // คำนวณ endDateTime รองรับข้ามเที่ยงคืน
   const hoursNum = parseFloat(hours) || 0;
@@ -81,6 +113,10 @@ export default function BookingPage() {
     }
     if (!endDateTime) {
       setSubmitError('ບໍ່ສາມາດຄຳນວນເວລາສິ້ນສຸດ');
+      return;
+    }
+    if (closingDateTime && endDateTime > closingDateTime) {
+      setSubmitError('ຮ້ານເປີດໃຫ້ບໍລິການເວລາ 12:00 - 01:00 ເທົ່ານັ້ນ ກະລຸນາເລືອກຊົ່ວໂມງໃຫ້ພໍດີ');
       return;
     }
     const startISO = `${date}T${startTime}:00`;
@@ -128,7 +164,7 @@ export default function BookingPage() {
           onClick={() => navigate('/rooms')}
           className="text-sm text-white mb-4 hover:underline flex items-center gap-1 drop-shadow"
         >
-          ← ກັບໄປຫ້ອງ
+          <FaArrowLeft /> ກັບໄປຫ້ອງ
         </button>
 
         {/* ─── Booking Card (dark maroon) ─── */}
@@ -137,7 +173,7 @@ export default function BookingPage() {
           {/* Header */}
           <div className="px-6 pt-5 pb-3 border-b border-rose-700">
             <h1 className="text-white font-bold text-lg flex items-center gap-2">
-              ✏️ ເພີ່ມ ການຈອງ
+              <FaPen /> ເພີ່ມ ການຈອງ
             </h1>
             <p className="text-rose-300 text-xs mt-0.5">
               ຫ້ອງ {room.room_number} · {room.roomType?.name}
@@ -155,7 +191,7 @@ export default function BookingPage() {
                   เพิ่ม image_url ในข้อมูลห้องผ่าน Admin Panel
                 */
                 <div className="text-center text-rose-500">
-                  <div className="text-4xl">🎤</div>
+                  <FaMicrophone className="text-4xl mx-auto" />
                   <p className="text-xs mt-1">[ ຮູບຫ້ອງ {room.room_number} ]</p>
                 </div>
               )}
@@ -169,7 +205,7 @@ export default function BookingPage() {
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <label className="text-rose-200 text-xs font-medium flex items-center gap-1 mb-1">
-                  👤 ຊື່ ແລະ ນາມສະກຸນ
+                  <FaUser /> ຊື່ ແລະ ນາມສະກຸນ
                 </label>
                 <input
                   value={user?.name || (user?.fname ? `${user.fname} ${user.lname || ''}`.trim() : '') || ''}
@@ -179,21 +215,31 @@ export default function BookingPage() {
               </div>
               <div>
                 <label className="text-rose-200 text-xs font-medium flex items-center gap-1 mb-1">
-                  🕐 ເວລາ Check-in
+                  <FaClock /> ເວລາ Check-in
                 </label>
-                <input
-                  type="time" value={startTime}
-                  onChange={(e) => setStartTime(e.target.value)}
+                <select
+                  value={startTime}
+                  onChange={(e) => {
+                    const newStart = e.target.value;
+                    setStartTime(newStart);
+                    const newMax = maxHoursFor(newStart);
+                    setHours((prev) => (parseFloat(prev) > newMax ? String(newMax) : prev));
+                  }}
                   required
                   className="w-full bg-white border border-rose-300 text-gray-800 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-rose-300"
-                />
+                >
+                  {START_TIME_OPTIONS.map((t) => (
+                    <option key={t} value={t}>{t}</option>
+                  ))}
+                </select>
               </div>
             </div>
+            <p className="text-rose-300 text-xs -mt-2">ຮ້ານເປີດໃຫ້ບໍລິການ 12:00 - 01:00</p>
 
             {/* Row 2: จำนวนคน */}
             <div>
               <label className="text-rose-200 text-xs font-medium flex items-center gap-1 mb-1">
-                👥 ຈຳນວນຜູ້ໃຊ້
+                <FaUsers /> ຈຳນວນຜູ້ໃຊ້
               </label>
               <input
                 type="number" min={1} max={room.roomType?.capacity || 20}
@@ -206,7 +252,7 @@ export default function BookingPage() {
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <label className="text-rose-200 text-xs font-medium flex items-center gap-1 mb-1">
-                  📅 ວັນທີ ຈອງ
+                  <FaCalendarAlt /> ວັນທີ ຈອງ
                 </label>
                 <input
                   type="date" min={today} value={date}
@@ -217,13 +263,13 @@ export default function BookingPage() {
               </div>
               <div>
                 <label className="text-rose-200 text-xs font-medium flex items-center gap-1 mb-1">
-                  ⏱️ ຈຳນວນຊົ່ວໂມງ
+                  <FaStopwatch /> ຈຳນວນຊົ່ວໂມງ
                 </label>
                 <select
                   value={hours} onChange={(e) => setHours(e.target.value)}
                   className="w-full bg-white border border-rose-300 text-gray-800 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-rose-300"
                 >
-                  {[1, 2, 3, 4, 5, 6, 7, 8].map((h) => (
+                  {Array.from({ length: maxHours }, (_, i) => i + 1).map((h) => (
                     <option key={h} value={h}>{h} ຊົ່ວໂມງ</option>
                   ))}
                 </select>
@@ -233,7 +279,7 @@ export default function BookingPage() {
             {/* ประเภทห้อง (readonly) */}
             <div>
               <label className="text-rose-200 text-xs font-medium flex items-center gap-1 mb-1">
-                🏠 ປະເພດຫ້ອງ
+                <FaHome /> ປະເພດຫ້ອງ
               </label>
               <div className="w-full bg-rose-900 border border-rose-700 text-rose-200 rounded-lg px-3 py-2 text-sm">
                 {room.roomType?.name} — ບັບຈຸໄດ້ {room.roomType?.capacity} ທ່ານ
@@ -270,14 +316,14 @@ export default function BookingPage() {
                 onClick={() => navigate('/rooms')}
                 className="flex-1 py-2.5 border border-rose-500 text-rose-200 rounded-xl text-sm font-semibold hover:bg-rose-800 transition flex items-center justify-center gap-1"
               >
-                ✕ ຍົກເລີກ
+                <FaTimes /> ຍົກເລີກ
               </button>
               <button
                 type="submit"
                 disabled={submitting || !user}
                 className="flex-1 py-2.5 bg-white text-[#7B2438] rounded-xl font-bold text-sm hover:bg-rose-100 disabled:opacity-50 disabled:cursor-not-allowed transition flex items-center justify-center gap-1"
               >
-                {submitting ? 'ກຳລັງຈອງ...' : '💾 ບັນທຶກ'}
+                {submitting ? 'ກຳລັງຈອງ...' : <><FaSave /> ບັນທຶກ</>}
               </button>
             </div>
 

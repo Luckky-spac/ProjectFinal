@@ -1,5 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { FaHome, FaLayerGroup, FaUserTie, FaUser, FaClipboardList, FaChartBar } from 'react-icons/fa';
+import PasswordInput from '../components/PasswordInput';
 import api from '../api/axios';
 
 // ─── helpers ────────────────────────────────────────────────────────────────
@@ -27,6 +29,10 @@ function Field({ label, name, value, onChange, type = 'text', required, options,
           className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-rose-300">
           {options.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
         </select>
+      ) : type === 'password' ? (
+        <PasswordInput name={name} value={value} onChange={onChange} required={required}
+          {...rest}
+          className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-rose-300" />
       ) : (
         <input name={name} type={type} value={value} onChange={onChange} required={required}
           {...rest}
@@ -566,15 +572,15 @@ function RoomTypesTab() {
 
 // ─── Main AdminPage ───────────────────────────────────────────────────────────
 const TABS = [
-  { key: 'rooms', label: '🏠 ຫ້ອງ' },
-  { key: 'room-types', label: '🗂️ ປະເພດຫ້ອງ' },
-  { key: 'employees', label: '👔 ພະນັກງານ' },
-  { key: 'users', label: '👤 ສະມາຊິກ' },
+  { key: 'rooms', icon: FaHome, label: 'ຫ້ອງ' },
+  { key: 'room-types', icon: FaLayerGroup, label: 'ປະເພດຫ້ອງ' },
+  { key: 'employees', icon: FaUserTie, label: 'ພະນັກງານ' },
+  { key: 'users', icon: FaUser, label: 'ສະມາຊິກ' },
 ];
 
 const ADMIN_SIDEBAR_NAV = [
-  { label: '📋 ການຈອງ', path: '/staff' },
-  { label: '📊 ລາຍງານ', path: '/reports' },
+  { icon: FaClipboardList, label: 'ການຈອງ', path: '/staff' },
+  { icon: FaChartBar, label: 'ລາຍງານ', path: '/reports' },
 ];
 
 export default function AdminPage() {
@@ -595,13 +601,13 @@ export default function AdminPage() {
             <button
               key={t.key}
               onClick={() => setTab(t.key)}
-              className={`text-left px-5 py-3 text-sm font-medium transition border-l-4 ${
+              className={`text-left px-5 py-3 text-sm font-medium transition border-l-4 flex items-center gap-2 ${
                 tab === t.key
                   ? 'bg-rose-900 text-white border-white'
                   : 'text-rose-300 border-transparent hover:bg-rose-900 hover:text-white'
               }`}
             >
-              {t.label}
+              <t.icon /> {t.label}
             </button>
           ))}
           <div className="border-t border-rose-700 mt-2 pt-2">
@@ -609,9 +615,9 @@ export default function AdminPage() {
               <button
                 key={item.label}
                 onClick={() => navigate(item.path)}
-                className="text-left w-full px-5 py-3 text-sm font-medium text-rose-300 border-l-4 border-transparent hover:bg-rose-900 hover:text-white transition"
+                className="text-left w-full px-5 py-3 text-sm font-medium text-rose-300 border-l-4 border-transparent hover:bg-rose-900 hover:text-white transition flex items-center gap-2"
               >
-                {item.label}
+                <item.icon /> {item.label}
               </button>
             ))}
           </div>

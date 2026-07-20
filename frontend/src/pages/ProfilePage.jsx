@@ -1,4 +1,6 @@
 import { useState, useEffect } from 'react';
+import { FaUserCircle, FaCheckCircle } from 'react-icons/fa';
+import PasswordInput from '../components/PasswordInput';
 import api from '../api/axios';
 import { useAuth } from '../context/AuthContext';
 
@@ -65,7 +67,7 @@ export default function ProfilePage() {
       }
       await api.put('/auth/profile', payload);
       await refreshUser();
-      setSuccess('✅ ບັນທຶກຂໍ້ມູນສຳເລັດ!');
+      setSuccess('ບັນທຶກຂໍ້ມູນສຳເລັດ!');
       setForm((f) => ({ ...f, password: '', new_password: '', confirm_password: '' }));
       window.scrollTo({ top: 0, behavior: 'smooth' });
     } catch (err) {
@@ -84,9 +86,15 @@ export default function ProfilePage() {
   return (
     <div className="min-h-screen bg-green-50 py-10 px-4">
       <div className="max-w-lg mx-auto bg-white rounded-2xl shadow-sm p-8 border border-rose-100">
-        <h1 className="text-2xl font-bold text-[#7B2438] mb-6">ຂໍ້ມູນສ່ວນຕົວ</h1>
+        <h1 className="text-2xl font-bold text-[#7B2438] mb-6 flex items-center gap-2">
+          <FaUserCircle className="text-3xl" /> ຂໍ້ມູນສ່ວນຕົວ
+        </h1>
 
-        {success && <div className="mb-4 bg-green-50 text-green-700 text-sm px-4 py-2 rounded-lg">{success}</div>}
+        {success && (
+          <div className="mb-4 bg-green-50 text-green-700 text-sm px-4 py-2 rounded-lg flex items-center gap-2">
+            <FaCheckCircle /> {success}
+          </div>
+        )}
         {error && <div className="mb-4 bg-red-50 text-red-600 text-sm px-4 py-2 rounded-lg">{error}</div>}
 
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">
@@ -146,15 +154,15 @@ export default function ProfilePage() {
           <p className="text-sm text-gray-400">ປ່ຽນລະຫັດຜ່ານ (ບໍ່ບັງຄັບ)</p>
           <div>
             <label className="text-sm text-gray-600 mb-1 block">ລະຫັດຜ່ານເກົ່າ</label>
-            <input name="password" type="password" value={form.password} onChange={handleChange} className={inputCls} />
+            <PasswordInput name="password" value={form.password} onChange={handleChange} className={inputCls} />
           </div>
           <div>
             <label className="text-sm text-gray-600 mb-1 block">ລະຫັດຜ່ານໃໝ່</label>
-            <input name="new_password" type="password" value={form.new_password} onChange={handleChange} className={inputCls} />
+            <PasswordInput name="new_password" value={form.new_password} onChange={handleChange} className={inputCls} />
           </div>
           <div>
             <label className="text-sm text-gray-600 mb-1 block">ຢືນຢັນລະຫັດຜ່ານໃໝ່</label>
-            <input name="confirm_password" type="password" value={form.confirm_password} onChange={handleChange} className={inputCls} />
+            <PasswordInput name="confirm_password" value={form.confirm_password} onChange={handleChange} className={inputCls} />
           </div>
 
           <button type="submit" disabled={loading}

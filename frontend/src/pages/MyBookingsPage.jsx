@@ -1,5 +1,6 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
+import { FaClipboardList, FaCalendarAlt } from 'react-icons/fa';
 import api from '../api/axios';
 
 const STATUS_CONFIG = {
@@ -410,6 +411,7 @@ export default function MyBookingsPage() {
   const [bookings, setBookings] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [selectedMonth, setSelectedMonth] = useState('');
 
   useEffect(() => {
     api.get('/bookings/my')
@@ -423,6 +425,17 @@ export default function MyBookingsPage() {
     setBookings((prev) => prev.map((b) => (b.b_id === updated.b_id ? updated : b)));
   };
 
+  const filteredBookings = useMemo(() => {
+    if (!selectedMonth) return bookings;
+    return bookings.filter((b) => b.start_time?.slice(0, 7) === selectedMonth);
+  }, [bookings, selectedMonth]);
+
+  const monthSummary = useMemo(() => {
+    if (!selectedMonth) return null;
+    const total = filteredBookings.reduce((sum, b) => sum + parseFloat(b.total_price || 0), 0);
+    return { count: filteredBookings.length, total };
+  }, [filteredBookings, selectedMonth]);
+
   return (
     <div className="relative min-h-screen py-8 px-4">
       <img src="/images/hero.jpeg" alt="" className="fixed inset-0 w-full h-full object-cover -z-10" />
@@ -435,21 +448,50 @@ export default function MyBookingsPage() {
           </button>
         </div>
 
+        {bookings.length > 0 && (
+          <div className="bg-white/95 rounded-xl p-3 mb-4 flex items-center gap-3 shadow-sm">
+            <FaCalendarAlt className="text-[#7B2438] shrink-0" />
+            <input
+              type="month" value={selectedMonth}
+              onChange={(e) => setSelectedMonth(e.target.value)}
+              className="border border-rose-200 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-rose-300"
+            />
+            {selectedMonth && (
+              <button
+                type="button" onClick={() => setSelectedMonth('')}
+                className="text-xs text-[#7B2438] underline"
+              >
+                ເບິ່ງທັງໝົດ
+              </button>
+            )}
+            {monthSummary && (
+              <span className="ml-auto text-xs text-gray-500 text-right">
+                {monthSummary.count} ລາຍການ · ຍອດລວມ ฿{monthSummary.total.toLocaleString()}
+              </span>
+            )}
+          </div>
+        )}
+
         {error && <p className="text-red-500 text-sm mb-4">{error}</p>}
 
         {loading ? (
           <div className="flex justify-center py-20 text-gray-400">ກຳລັງໂຫຼດ...</div>
         ) : bookings.length === 0 ? (
           <div className="text-center py-20 text-gray-400 flex flex-col items-center gap-3">
-            <span className="text-5xl">📋</span>
+            <FaClipboardList className="text-5xl" />
             <p>ຍັງບໍ່ມີປະຫວັດການຈອງ</p>
             <button onClick={() => navigate('/rooms')} className="text-[#7B2438] underline text-sm">
               ເບິ່ງຫ້ອງທີ່ວ່າງ
             </button>
           </div>
+        ) : filteredBookings.length === 0 ? (
+          <div className="text-center py-20 text-gray-400 flex flex-col items-center gap-3">
+            <FaCalendarAlt className="text-5xl" />
+            <p>ບໍ່ມີການຈອງໃນເດືອນນີ້</p>
+          </div>
         ) : (
           <div className="flex flex-col gap-4">
-            {bookings.map((b) => (
+            {filteredBookings.map((b) => (
               <BookingCard key={b.b_id} booking={b} isNew={b.b_id === newBookingId} onUpdate={handleUpdate} />
             ))}
           </div>
