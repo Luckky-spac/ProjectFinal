@@ -7,9 +7,10 @@ const bookingIncludes = [
   { model: Payment, as: 'payments' },
 ];
 
-// ຮ້ານເປີດ 12:00 - 01:00 (ຂ້າມວັນ)
+// ຮ້ານເປີດ 12:00 - 01:00 (ຂ້າມວັນ) — ຈອງໄດ້ຄັ້ງລະ 4 ຊົ່ວໂມງເທົ່ານັ້ນ (ຂັ້ນຕ່ຳ/ແພັກເກັດ)
 const OPEN_HOUR = 12;
 const CLOSE_HOUR = 1;
+const BOOKING_HOURS = 4;
 
 // ຄຳນວນເວລາປິດ (01:00 ຂອງມື້ຖັດໄປ) ອີງໃສ່ວັນທີ່ຂອງ start
 const closingTimeFor = (start) => {
@@ -39,6 +40,9 @@ const createBooking = async (req, res) => {
     }
     if (!isWithinBusinessHours(start, end)) {
       return res.status(400).json({ message: 'ຮ້ານເປີດໃຫ້ບໍລິການເວລາ 12:00 - 01:00 ເທົ່ານັ້ນ' });
+    }
+    if ((end - start) / 3600000 !== BOOKING_HOURS) {
+      return res.status(400).json({ message: `ຈອງໄດ້ຄັ້ງລະ ${BOOKING_HOURS} ຊົ່ວໂມງເທົ່ານັ້ນ` });
     }
 
     const room = await Room.findByPk(room_id, {
@@ -274,8 +278,8 @@ const extendBooking = async (req, res) => {
       return res.status(400).json({ message: 'ຫ້ອງຖືກຈອງຕໍ່ໃນຊ່ວງເວລານັ້ນແລ້ວ' });
     }
 
-    const pricePerHour = parseFloat(booking.room.roomType.price_per_hour);
-    const extraPrice = parseFloat((extra_hours * pricePerHour).toFixed(2));
+    const overtimeRate = parseFloat(booking.room.roomType.overtime_price_per_hour);
+    const extraPrice = parseFloat((extra_hours * overtimeRate).toFixed(2));
     const newTotal = parseFloat((parseFloat(booking.total_price) + extraPrice).toFixed(2));
 
     await booking.update({ end_time: newEnd, total_price: newTotal });

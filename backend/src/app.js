@@ -5,7 +5,7 @@ const express = require('express');
 const cors = require('cors');
 const { sequelize } = require('./models');
 const routes = require('./routes');
-const { startAutoCheckoutJob } = require('./jobs/autoCheckout');
+const { startAutoOvertimeJob } = require('./jobs/autoOvertime');
 const { startPhajaySocket } = require('./services/phajay');
 const { confirmQrPaymentByTransactionId } = require('./controllers/paymentController');
 
@@ -33,7 +33,7 @@ sequelize.sync({ alter: true })
   .then(() => {
     console.log('Database connected and synced');
     app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
-    startAutoCheckoutJob();
+    startAutoOvertimeJob();
     startPhajaySocket((data) => {
       if (data?.status === 'PAYMENT_COMPLETED' && data?.transactionId) {
         confirmQrPaymentByTransactionId(data.transactionId).catch((err) =>
