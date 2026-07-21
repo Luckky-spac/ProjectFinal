@@ -8,6 +8,11 @@ const bookingIncludes = [
   { model: Payment, as: 'payments' },
 ];
 
+// ค่ามัดจำ lock ไว้ที่ 20% ของราคาเต็ม — คิดฝั่ง backend เสมอ ไม่รับค่าจาก client เพื่อกันแก้ยอดผ่าน API ตรง ๆ
+function depositAmountFor(booking) {
+  return Math.ceil(parseFloat(booking.total_price) * 0.2);
+}
+
 // ใช้ร่วมกันทั้งตอน staff กดยืนยันเงินสด และตอน PhaJay แจ้งว่าจ่าย QR สำเร็จ
 async function applyConfirmedPayment(payment) {
   await payment.update({ status: 'confirmed' });
@@ -35,7 +40,7 @@ const createPayment = async (req, res) => {
   try {
     const { booking_id, amount, type } = req.body;
 
-    if (!booking_id || !amount || !type) {
+    if (!booking_id || !type || (type !== 'deposit' && !amount)) {
       return res.status(400).json({ message: 'ກະລຸນາກອກຂໍ້ມູນໃຫ້ຄົບ' });
     }
 
@@ -44,7 +49,7 @@ const createPayment = async (req, res) => {
 
     const payment = await Payment.create({
       b_id: booking_id,
-      amount: parseFloat(amount),
+      amount: type === 'deposit' ? depositAmountFor(booking) : parseFloat(amount),
       type,
       method: 'cash',
       status: 'pending',
@@ -62,16 +67,18 @@ const generateQrPayment = async (req, res) => {
   try {
     const { booking_id, amount, type } = req.body;
 
-    if (!booking_id || !amount || !type) {
+    if (!booking_id || !type || (type !== 'deposit' && !amount)) {
       return res.status(400).json({ message: 'ກະລຸນາກອກຂໍ້ມູນໃຫ້ຄົບ' });
     }
 
     const booking = await Booking.findByPk(booking_id);
     if (!booking) return res.status(404).json({ message: 'ບໍ່ພົບການຈອງນີ້' });
 
+    const payAmount = type === 'deposit' ? depositAmountFor(booking) : parseFloat(amount);
+
     const payment = await Payment.create({
       b_id: booking_id,
-      amount: parseFloat(amount),
+      amount: payAmount,
       type,
       method: 'QR',
       status: 'pending',
@@ -85,7 +92,7 @@ const generateQrPayment = async (req, res) => {
     let phajayResult;
     try {
       phajayResult = await generateQR({
-        amount: parseFloat(amount),
+        amount: payAmount,
         description,
         tag1: String(payment.pay_id),
         tag2: String(booking_id),

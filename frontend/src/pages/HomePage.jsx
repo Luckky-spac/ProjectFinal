@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { FaMagic, FaMicrophone, FaUser, FaCoins, FaArrowRight, FaFacebook, FaPhone, FaEnvelope, FaClock } from 'react-icons/fa';
 import api from '../api/axios';
+import { formatUSD } from '../utils/currency';
 
 export default function HomePage() {
   const navigate = useNavigate();
@@ -52,7 +53,7 @@ export default function HomePage() {
               <h2 className="font-bold text-white text-base mb-1">ຫ້ອງ {roomL.room_number} — {roomL.roomType?.name}</h2>
               <div className="flex gap-4 text-rose-200 text-sm">
                 <span className="flex items-center gap-1"><FaUser /> {roomL.roomType?.capacity} ທ່ານ</span>
-                <span className="flex items-center gap-1"><FaCoins /> ฿{Number(roomL.roomType?.price_per_hour).toLocaleString()}/ຊມ.</span>
+                <span className="flex items-center gap-1"><FaCoins /> {formatUSD(roomL.roomType?.price_per_hour)}/ຊມ.</span>
               </div>
             </div>
           </div>

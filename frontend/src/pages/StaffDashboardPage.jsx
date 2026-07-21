@@ -4,6 +4,7 @@ import { FaTools, FaChartBar, FaClipboardList, FaUser } from 'react-icons/fa';
 import PasswordInput from '../components/PasswordInput';
 import api from '../api/axios';
 import { useAuth } from '../context/AuthContext';
+import { formatUSD } from '../utils/currency';
 
 const STATUS_CONFIG = {
   pending: { text: 'ລໍການຢືນຢັນ', cls: 'bg-yellow-100 text-yellow-700' },
@@ -195,7 +196,7 @@ function BookingRow({ booking, onUpdate }) {
           </p>
         </div>
         <span className="text-sm font-bold text-[#7B2438] whitespace-nowrap">
-          ฿{Number(booking.total_price).toLocaleString()}
+          {formatUSD(booking.total_price)}
         </span>
         <span className="text-gray-400 text-xs">{expanded ? '▲' : '▼'}</span>
       </div>
@@ -207,7 +208,7 @@ function BookingRow({ booking, onUpdate }) {
             <div><span className="text-gray-400">ຜູ້ຈອງ: </span>{[booking.user?.customer?.fname, booking.user?.customer?.lname].filter(Boolean).join(' ')}</div>
             <div><span className="text-gray-400">ໂທ: </span>{booking.user?.customer?.phone || '-'}</div>
             <div><span className="text-gray-400">ຜູ້ເຂົ້າໃຊ້: </span>{booking.guests} ຄົນ</div>
-            <div><span className="text-gray-400">ມັດຈຳ: </span>฿{Number(booking.deposit_amount || 0).toLocaleString()}</div>
+            <div><span className="text-gray-400">ມັດຈຳ: </span>{formatUSD(booking.deposit_amount || 0)}</div>
           </div>
 
           {/* Payment info */}
@@ -217,7 +218,7 @@ function BookingRow({ booking, onUpdate }) {
                 <div key={p.pay_id} className="flex justify-between bg-white rounded-lg px-3 py-1.5 border">
                   <span>{p.type === 'deposit' ? 'ມັດຈຳ' : 'ຊຳລະສ່ວນທີ່ເຫຼືອ'} ({p.method})</span>
                   <span className={p.status === 'confirmed' ? 'text-green-600 font-semibold' : p.status === 'rejected' ? 'text-red-500' : 'text-yellow-600'}>
-                    ฿{Number(p.amount).toLocaleString()} — {p.status === 'confirmed' ? 'ຢືນຢັນ' : p.status === 'rejected' ? 'ປະຕິເສດ' : 'ລໍຢືນຢັນ'}
+                    {formatUSD(p.amount)} — {p.status === 'confirmed' ? 'ຢືນຢັນ' : p.status === 'rejected' ? 'ປະຕິເສດ' : 'ລໍຢືນຢັນ'}
                   </span>
                 </div>
               ))}
@@ -234,15 +235,15 @@ function BookingRow({ booking, onUpdate }) {
                 <p className="text-xs font-bold text-orange-700 mb-1">ສະຫຼຸບລາຄາ</p>
                 <div className="flex justify-between text-sm text-gray-600">
                   <span>ລາຄາລວມ</span>
-                  <span className="font-semibold">฿{total.toLocaleString()}</span>
+                  <span className="font-semibold">{formatUSD(total)}</span>
                 </div>
                 <div className="flex justify-between text-sm text-gray-600">
                   <span>ມັດຈຳທີ່ຈ່າຍແລ້ວ</span>
-                  <span className="text-green-600 font-semibold">- ฿{deposit.toLocaleString()}</span>
+                  <span className="text-green-600 font-semibold">- {formatUSD(deposit)}</span>
                 </div>
                 <div className="flex justify-between text-base font-bold border-t border-orange-200 pt-1 mt-1">
                   <span className="text-orange-700">ຍັງຄ້າງຊຳລະ</span>
-                  <span className="text-orange-700">฿{remaining.toLocaleString()}</span>
+                  <span className="text-orange-700">{formatUSD(remaining)}</span>
                 </div>
               </div>
             );
@@ -528,12 +529,15 @@ export default function StaffDashboardPage() {
   const [bookings, setBookings] = useState([]);
   const [loading, setLoading] = useState(true);
   const [tab, setTab] = useState('');
+  const [dateFilter, setDateFilter] = useState('');
   const [error, setError] = useState('');
 
-  const fetchBookings = useCallback((status = '') => {
+  const fetchBookings = useCallback((status = '', date = '') => {
     setLoading(true);
     setError('');
-    const params = status ? { status } : {};
+    const params = {};
+    if (status) params.status = status;
+    if (date) params.date = date;
     api.get('/bookings', { params })
       .then((res) => setBookings(res.data))
       .catch((err) => setError(err.response?.data?.message || 'ໂຫຼດຂໍ້ມູນລົ້ມເຫຼວ'))
@@ -541,8 +545,8 @@ export default function StaffDashboardPage() {
   }, []);
 
   useEffect(() => {
-    if (view === 'bookings') fetchBookings(tab);
-  }, [tab, view, fetchBookings]);
+    if (view === 'bookings') fetchBookings(tab, dateFilter);
+  }, [tab, dateFilter, view, fetchBookings]);
 
   const handleUpdate = (updated) => {
     if (!updated) return;
@@ -626,10 +630,30 @@ export default function StaffDashboardPage() {
                   </p>
                 )}
               </div>
-              <button onClick={() => fetchBookings(tab)}
+              <button onClick={() => fetchBookings(tab, dateFilter)}
                 className="text-sm text-[#7B2438] hover:underline font-medium">
                 ໂຫຼດໃໝ່
               </button>
+            </div>
+
+            {/* Date Filter */}
+            <div className="flex items-end gap-2 mb-3">
+              <div className="flex flex-col gap-1">
+                <label className="text-xs text-gray-500 font-medium">ວັນທີ ຈອງ (ຄົ້ນຫາຕາມມື້)</label>
+                <input
+                  type="date" value={dateFilter}
+                  onChange={(e) => setDateFilter(e.target.value)}
+                  className="border border-gray-200 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-rose-300"
+                />
+              </div>
+              {dateFilter && (
+                <button
+                  type="button" onClick={() => setDateFilter('')}
+                  className="px-3 py-1.5 border border-rose-300 rounded-lg text-xs text-[#7B2438] hover:bg-rose-50 transition"
+                >
+                  ເບິ່ງທຸກວັນ
+                </button>
+              )}
             </div>
 
             {/* Status Tabs */}

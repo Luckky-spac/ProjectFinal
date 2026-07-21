@@ -140,8 +140,14 @@ const updateStatus = async (req, res) => {
 // GET /api/bookings  (ພະນັກງານດູທັງໝົດ)
 const getAllBookings = async (req, res) => {
   try {
-    const { status } = req.query;
-    const where = status ? { status } : {};
+    const { status, date } = req.query;
+    const where = {};
+    if (status) where.status = status;
+    if (date) {
+      where.start_time = {
+        [Op.between]: [new Date(`${date}T00:00:00`), new Date(`${date}T23:59:59.999`)],
+      };
+    }
     const bookings = await Booking.findAll({
       where,
       include: bookingIncludes,

@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { FaClipboardList, FaChartBar, FaHome } from 'react-icons/fa';
 import api from '../api/axios';
 import { useAuth } from '../context/AuthContext';
+import { formatUSD } from '../utils/currency';
 
 function formatDate(iso) {
   if (!iso) return '-';
@@ -64,7 +65,7 @@ function BookingsReport() {
                   <td className="py-2 pr-3 text-gray-500 text-xs">{formatDateTime(b.start_time)}</td>
                   <td className="py-2 pr-3 text-gray-500 text-xs">{formatDateTime(b.end_time)}</td>
                   <td className="py-2 pr-3"><span className="text-xs bg-gray-100 px-2 py-0.5 rounded-full">{STATUS_LAO[b.status] || b.status}</span></td>
-                  <td className="py-2 text-right font-semibold text-[#7B2438]">฿{Number(b.total_price).toLocaleString()}</td>
+                  <td className="py-2 text-right font-semibold text-[#7B2438]">{formatUSD(b.total_price)}</td>
                 </tr>
               ))}
               {data.length === 0 && <tr><td colSpan={6} className="py-8 text-center text-gray-400">ບໍ່ມີຂໍ້ມູນ</td></tr>}
@@ -104,7 +105,7 @@ function RevenueReport() {
         <>
           <div className="bg-rose-50 rounded-xl p-4 mb-4">
             <p className="text-sm text-gray-500">ລາຍຮັບລວມເດືອນນີ້</p>
-            <p className="text-3xl font-bold text-[#7B2438]">฿{Number(data.total_revenue).toLocaleString()}</p>
+            <p className="text-3xl font-bold text-[#7B2438]">{formatUSD(data.total_revenue)}</p>
           </div>
           {data.by_day.length > 0 && (
             <div className="mb-4">
@@ -113,7 +114,7 @@ function RevenueReport() {
                 {data.by_day.map((d) => (
                   <div key={d.date} className="flex justify-between items-center text-sm py-1 border-b">
                     <span className="text-gray-500">{formatDate(d.date)}</span>
-                    <span className="font-semibold text-gray-700">฿{Number(d.amount).toLocaleString()}</span>
+                    <span className="font-semibold text-gray-700">{formatUSD(d.amount)}</span>
                   </div>
                 ))}
               </div>
@@ -153,7 +154,7 @@ function RoomsReport() {
                   <td className="py-2 pr-3 text-gray-500">{r.roomType?.name}</td>
                   <td className="py-2 pr-3 text-center">{r.total_bookings}</td>
                   <td className="py-2 pr-3 text-center text-green-600 font-semibold">{r.completed_bookings}</td>
-                  <td className="py-2 text-right font-semibold text-[#7B2438]">฿{Number(r.revenue).toLocaleString()}</td>
+                  <td className="py-2 text-right font-semibold text-[#7B2438]">{formatUSD(r.revenue)}</td>
                 </tr>
               ))}
               {data.length === 0 && <tr><td colSpan={5} className="py-8 text-center text-gray-400">ບໍ່ມີຂໍ້ມູນ</td></tr>}
@@ -193,7 +194,7 @@ function CustomersReport() {
                   <td className="py-2 pr-3 text-gray-500">{u.phone || '-'}</td>
                   <td className="py-2 pr-3 text-center">{u.total_bookings}</td>
                   <td className="py-2 pr-3 text-center text-green-600 font-semibold">{u.completed_bookings}</td>
-                  <td className="py-2 text-right font-semibold text-[#7B2438]">฿{Number(u.total_spent).toLocaleString()}</td>
+                  <td className="py-2 text-right font-semibold text-[#7B2438]">{formatUSD(u.total_spent)}</td>
                 </tr>
               ))}
               {data.length === 0 && <tr><td colSpan={6} className="py-8 text-center text-gray-400">ບໍ່ມີຂໍ້ມູນ</td></tr>}

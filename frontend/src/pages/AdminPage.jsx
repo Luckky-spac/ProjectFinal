@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { FaHome, FaLayerGroup, FaUserTie, FaUser, FaClipboardList, FaChartBar } from 'react-icons/fa';
 import PasswordInput from '../components/PasswordInput';
 import api from '../api/axios';
+import { formatUSD } from '../utils/currency';
 
 // ─── helpers ────────────────────────────────────────────────────────────────
 function Btn({ label, color = 'purple', onClick, disabled, small }) {
@@ -423,7 +424,7 @@ function RoomsTab() {
             <Field label="ເລກຫ້ອງ" name="room_number" value={form.room_number} onChange={onChange} required />
             <Field label="ຊັ້ນ" name="floor" type="number" value={form.floor} onChange={onChange} />
             <Field label="ປະເພດຫ້ອງ" name="room_type_id" value={form.room_type_id} onChange={onChange} required
-              options={types.map((t) => ({ value: String(t.rtype_id), label: `${t.name} (฿${t.price_per_hour}/ຊມ.)` }))} />
+              options={types.map((t) => ({ value: String(t.rtype_id), label: `${t.name} ($${t.price_per_hour}/ຊມ.)` }))} />
             <Field label="ສະຖານະ" name="status" value={form.status} onChange={onChange}
               options={[{ value: 'available', label: 'ວ່າງ' }, { value: 'occupied', label: 'ບໍ່ວ່າງ' }, { value: 'maintenance', label: 'ຊ່ອມບຳລຸງ' }]} />
           </div>
@@ -536,8 +537,8 @@ function RoomTypesTab() {
           <div className="grid grid-cols-2 gap-2 mb-3">
             <Field label="ຊື່ປະເພດ" name="name" value={form.name} onChange={onChange} required />
             <Field label="ຄວາມຈຸ (ຄົນ)" name="capacity" type="number" value={form.capacity} onChange={onChange} />
-            <Field label="ລາຄາ/ຊົ່ວໂມງ (ບາດ)" name="price_per_hour" type="number" value={form.price_per_hour} onChange={onChange} required />
-            <Field label="ລາຄາຕໍ່ ຊມ. ເມື່ອເກີນເວລາ (ບາດ)" name="overtime_price_per_hour" type="number" value={form.overtime_price_per_hour} onChange={onChange} required />
+            <Field label="ລາຄາ/ຊົ່ວໂມງ ($)" name="price_per_hour" type="number" value={form.price_per_hour} onChange={onChange} required />
+            <Field label="ລາຄາຕໍ່ ຊມ. ເມື່ອເກີນເວລາ ($)" name="overtime_price_per_hour" type="number" value={form.overtime_price_per_hour} onChange={onChange} required />
             <Field label="ຄຳອະທິບາຍ" name="description" value={form.description} onChange={onChange} />
           </div>
           <div className="flex gap-2">
@@ -557,8 +558,8 @@ function RoomTypesTab() {
               <tr key={t.rtype_id} className="border-b last:border-0">
                 <td className="py-2 pr-4 font-medium">{t.name}</td>
                 <td className="py-2 pr-4 text-gray-500">{t.capacity} ຄົນ</td>
-                <td className="py-2 pr-4 text-gray-500">฿{Number(t.price_per_hour).toLocaleString()}</td>
-                <td className="py-2 pr-4 text-gray-500">฿{Number(t.overtime_price_per_hour).toLocaleString()}</td>
+                <td className="py-2 pr-4 text-gray-500">{formatUSD(t.price_per_hour)}</td>
+                <td className="py-2 pr-4 text-gray-500">{formatUSD(t.overtime_price_per_hour)}</td>
                 <td className="py-2 flex gap-2">
                   <Btn small label="ແກ້ໄຂ" color="gray" onClick={() => startEdit(t)} />
                   <Btn small label="ລົບ" color="red" onClick={() => del(t.rtype_id)} />

@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { FaCalendarAlt } from 'react-icons/fa';
 import api from '../api/axios';
+import { BOOKING_HOURS, START_TIME_OPTIONS, computeEndDateTime } from '../utils/shopHours';
 
 function RoomCard({ room, onBook }) {
   const isAvail = room.isAvailable;
@@ -71,9 +72,14 @@ export default function RoomsPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [date, setDate] = useState(today);
-  const [startTime, setStartTime] = useState('');
-  const [endTime, setEndTime] = useState('');
+  const [startTime, setStartTime] = useState(START_TIME_OPTIONS[0]);
   const [filtered, setFiltered] = useState(false);
+
+  // จองครั้งละ 4 ชม. คงที่เหมือนหน้าจอง — เวลาสิ้นสุดคำนวณจากเวลาเริ่มเสมอ เลือกเองไม่ได้ กันเลือกช่วงเวลาที่จบก่อนเริ่ม
+  const endDateTime = computeEndDateTime(date, startTime);
+  const endTime = endDateTime
+    ? `${String(endDateTime.getHours()).padStart(2, '0')}:${String(endDateTime.getMinutes()).padStart(2, '0')}`
+    : '';
 
   const fetchRooms = async (params = {}) => {
     setLoading(true);
@@ -98,8 +104,7 @@ export default function RoomsPage() {
   };
 
   const handleReset = () => {
-    setStartTime('');
-    setEndTime('');
+    setStartTime(START_TIME_OPTIONS[0]);
     setFiltered(false);
     fetchRooms();
   };
@@ -132,19 +137,21 @@ export default function RoomsPage() {
           </div>
           <div className="flex flex-col gap-1 w-32">
             <label className="text-xs text-gray-500 font-medium">ເວລາເລີ່ມ</label>
-            <input
-              type="time" value={startTime} min="12:00" max="23:59"
+            <select
+              value={startTime}
               onChange={(e) => setStartTime(e.target.value)}
               className="w-full border border-rose-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-rose-300"
-            />
+            >
+              {START_TIME_OPTIONS.map((t) => (
+                <option key={t} value={t}>{t}</option>
+              ))}
+            </select>
           </div>
           <div className="flex flex-col gap-1 w-32">
             <label className="text-xs text-gray-500 font-medium">ເວລາສິ້ນສຸດ</label>
-            <input
-              type="time" value={endTime}
-              onChange={(e) => setEndTime(e.target.value)}
-              className="w-full border border-rose-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-rose-300"
-            />
+            <div className="w-full border border-rose-100 bg-rose-50 rounded-lg px-3 py-2 text-sm text-gray-500">
+              {endTime || '—'}
+            </div>
           </div>
           <button
             type="submit"
@@ -162,7 +169,7 @@ export default function RoomsPage() {
             </button>
           )}
           <p className="w-full text-xs text-gray-400">
-            ເປີດ 12ໂມງຕອນສວາຍ ຮອດ 1ໂມງກາງຄືນ (ຖ້າເວລາຈອງເກິນ 1ໂມງກາງຄືນຈະບໍ່ສາມາດຈອງໄດ້)
+            ເປີດ 12ໂມງຕອນສວາຍ ຮອດ 1ໂມງກາງຄືນ · ຈອງຄັ້ງລະ {BOOKING_HOURS} ຊົ່ວໂມງ (ຂັ້ນຕ່ຳ) — ເວລາສິ້ນສຸດຄິດໃຫ້ອັດຕະໂນມັດ
           </p>
         </form>
 

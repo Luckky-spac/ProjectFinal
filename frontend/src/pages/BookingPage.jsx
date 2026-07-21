@@ -3,23 +3,8 @@ import { useSearchParams, useNavigate } from 'react-router-dom';
 import { FaArrowLeft, FaPen, FaUser, FaClock, FaCalendarAlt, FaHome, FaTimes, FaSave, FaMicrophone, FaExclamationTriangle } from 'react-icons/fa';
 import api from '../api/axios';
 import { useAuth } from '../context/AuthContext';
-
-// ຮ້ານເປີດ 12:00 - 01:00 (ຂ້າມວັນ) — ຈອງໄດ້ຄັ້ງລະ 4 ຊົ່ວໂມງເທົ່ານັ້ນ (ຂັ້ນຕ່ຳ/ແພັກເກັດ)
-const OPEN_HOUR = 12;
-const CLOSE_HOUR = 1;
-const BOOKING_HOURS = 4;
-
-// ຕົວເລືອກເວລາເລີ່ມ: 12:00 ຫາເວລາຫຼ້າສຸດທີ່ຍັງຈອງ 4 ຊົ່ວໂມງແລ້ວປິດພໍດີ 01:00
-const LAST_START_MIN = (24 + CLOSE_HOUR) * 60 - BOOKING_HOURS * 60;
-const START_TIME_OPTIONS = Array.from(
-  { length: (LAST_START_MIN - OPEN_HOUR * 60) / 30 + 1 },
-  (_, i) => {
-    const totalMin = OPEN_HOUR * 60 + i * 30;
-    const h = String(Math.floor(totalMin / 60)).padStart(2, '0');
-    const m = String(totalMin % 60).padStart(2, '0');
-    return `${h}:${m}`;
-  }
-);
+import { formatUSD } from '../utils/currency';
+import { CLOSE_HOUR, BOOKING_HOURS, START_TIME_OPTIONS, computeEndDateTime } from '../utils/shopHours';
 
 export default function BookingPage() {
   const [searchParams] = useSearchParams();
@@ -66,12 +51,7 @@ export default function BookingPage() {
   const pricePerHour = parseFloat(room?.roomType?.price_per_hour) || 0;
   const totalPrice = pricePerHour * BOOKING_HOURS;
 
-  const endDateTime = (() => {
-    if (!date || !startTime) return null;
-    const start = new Date(`${date}T${startTime}:00`);
-    if (isNaN(start)) return null;
-    return new Date(start.getTime() + BOOKING_HOURS * 3600000);
-  })();
+  const endDateTime = computeEndDateTime(date, startTime);
 
   const endTime = endDateTime
     ? `${String(endDateTime.getHours()).padStart(2, '0')}:${String(endDateTime.getMinutes()).padStart(2, '0')}`
@@ -248,7 +228,7 @@ export default function BookingPage() {
               </div>
               <div className="border-t border-rose-700 mt-1 pt-1 flex justify-between font-bold text-white text-base">
                 <span>ລວມທັງໝົດ</span>
-                <span>฿{totalPrice.toLocaleString()}</span>
+                <span>{formatUSD(totalPrice)}</span>
               </div>
             </div>
 

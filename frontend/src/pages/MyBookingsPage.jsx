@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { FaClipboardList, FaCalendarAlt } from 'react-icons/fa';
 import api from '../api/axios';
+import { formatUSD } from '../utils/currency';
 
 const STATUS_CONFIG = {
   pending: { text: 'ລໍການຢືນຢັນ', cls: 'bg-yellow-100 text-yellow-700' },
@@ -27,20 +28,21 @@ function QRPayment({ amount, qrImage }) {
     <div className="flex flex-col items-center bg-white border-2 border-dashed border-gray-300 rounded-xl p-4 gap-2">
       <img src={qrImage} alt="QR ຊຳລະເງິນ" className="w-48 h-48 object-contain" />
       <p className="text-xs text-gray-500">ສະແກນດ້ວຍແອັບທະນາຄານເພື່ອຈ່າຍ (BCEL One)</p>
-      <p className="text-sm font-bold text-[#7B2438]">฿{Number(amount).toLocaleString()}</p>
+      <p className="text-sm font-bold text-[#7B2438]">{formatUSD(amount)}</p>
     </div>
   );
 }
 
 function PaymentForm({ booking, type, onSuccess }) {
   const isDeposit = type === 'deposit';
+  // ค่ามัดจำ lock ไว้ที่ 20% ของราคาเต็ม แก้ไขเองไม่ได้ (backend ก็คำนวณค่านี้ซ้ำอีกชั้น ไม่รับยอดจาก client)
   const suggested = isDeposit
-    ? Math.ceil(parseFloat(booking.total_price) * 0.3)
+    ? Math.ceil(parseFloat(booking.total_price) * 0.2)
     : parseFloat(booking.total_price) - parseFloat(booking.deposit_amount || 0);
 
   const pendingQrPayment = booking.payments?.find((p) => p.type === type && p.status === 'pending' && p.method === 'QR');
 
-  const [amount, setAmount] = useState(String(pendingQrPayment ? pendingQrPayment.amount : suggested));
+  const amount = String(pendingQrPayment ? pendingQrPayment.amount : suggested);
   const [method, setMethod] = useState('QR');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -115,21 +117,16 @@ function PaymentForm({ booking, type, onSuccess }) {
 
       {!isDeposit && (
         <div className="text-sm text-gray-600 flex flex-col gap-1">
-          <div className="flex justify-between"><span>ລາຄາລວມ</span><span>฿{Number(booking.total_price).toLocaleString()}</span></div>
-          <div className="flex justify-between"><span>ມັດຈຳແລ້ວ</span><span>฿{Number(booking.deposit_amount || 0).toLocaleString()}</span></div>
-          <div className="flex justify-between font-bold border-t pt-1"><span>ຍອດທີ່ຕ້ອງຊຳລະ</span><span>฿{Number(suggested).toLocaleString()}</span></div>
+          <div className="flex justify-between"><span>ລາຄາລວມ</span><span>{formatUSD(booking.total_price)}</span></div>
+          <div className="flex justify-between"><span>ມັດຈຳແລ້ວ</span><span>{formatUSD(booking.deposit_amount || 0)}</span></div>
+          <div className="flex justify-between font-bold border-t pt-1"><span>ຍອດທີ່ຕ້ອງຊຳລະ</span><span>{formatUSD(suggested)}</span></div>
         </div>
       )}
 
       {isDeposit && (
-        <div className="flex gap-2 items-center">
-          <input
-            type="number" min="1" value={amount} disabled={!!qrInfo}
-            onChange={(e) => setAmount(e.target.value)}
-            placeholder={`ແນະນຳ ฿${Number(suggested).toLocaleString()} (30%)`}
-            className="border rounded-lg px-3 py-1.5 text-sm flex-1 disabled:bg-gray-100"
-          />
-          <span className="text-xs text-gray-500">ບາດ</span>
+        <div className="flex justify-between text-sm text-gray-600">
+          <span>ຍອດມັດຈຳ (20%)</span>
+          <span className="font-bold text-yellow-700">{formatUSD(amount)}</span>
         </div>
       )}
 
@@ -170,7 +167,7 @@ function PaymentForm({ booking, type, onSuccess }) {
       {method === 'cash' && (
         <div className="flex flex-col gap-2">
           <p className="text-xs text-gray-600 bg-white rounded-lg px-3 py-2 border border-gray-200">
-            ກະລຸນາຊຳລະເງິນສົດໃຫ້ພະນັກງານ ຈຳນວນ <strong>฿{Number(isDeposit ? amount : suggested).toLocaleString()}</strong> ບາດ
+            ກະລຸນາຊຳລະເງິນສົດໃຫ້ພະນັກງານ ຈຳນວນ <strong>{formatUSD(isDeposit ? amount : suggested)}</strong>
           </p>
           {error && <p className="text-red-500 text-xs">{error}</p>}
           {!cashSent && (
@@ -191,18 +188,18 @@ function Receipt({ booking }) {
     <div className="mt-3 bg-gray-50 rounded-xl p-4 flex flex-col gap-2 text-sm">
       <p className="font-semibold text-gray-700">ໃບບິນ</p>
       <div className="flex justify-between text-gray-600">
-        <span>ລາຄາລວມ</span><span>฿{Number(booking.total_price).toLocaleString()}</span>
+        <span>ລາຄາລວມ</span><span>{formatUSD(booking.total_price)}</span>
       </div>
       <div className="flex justify-between text-gray-600">
-        <span>ມັດຈຳ</span><span>฿{Number(booking.deposit_amount || 0).toLocaleString()}</span>
+        <span>ມັດຈຳ</span><span>{formatUSD(booking.deposit_amount || 0)}</span>
       </div>
       {finalPayment && (
         <div className="flex justify-between text-gray-600">
-          <span>ຊຳລະສ່ວນທີ່ເຫຼືອ</span><span>฿{Number(finalPayment.amount).toLocaleString()}</span>
+          <span>ຊຳລະສ່ວນທີ່ເຫຼືອ</span><span>{formatUSD(finalPayment.amount)}</span>
         </div>
       )}
       <div className="flex justify-between font-bold text-gray-800 border-t pt-2">
-        <span>ລວມທັງໝົດ</span><span>฿{Number(booking.total_price).toLocaleString()}</span>
+        <span>ລວມທັງໝົດ</span><span>{formatUSD(booking.total_price)}</span>
       </div>
       {booking.actual_check_in && (
         <p className="text-xs text-gray-400">ເຊັກອິນ: {formatDateTime(booking.actual_check_in)}</p>
@@ -215,6 +212,7 @@ function Receipt({ booking }) {
 }
 
 function ExtendForm({ booking, onSuccess }) {
+  const overtimeRate = parseFloat(booking.room?.roomType?.overtime_price_per_hour || 0);
   const [hours, setHours] = useState(1);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -226,7 +224,7 @@ function ExtendForm({ booking, onSuccess }) {
     try {
       const res = await api.patch(`/bookings/${booking.b_id}/extend`, { extra_hours: hours });
       onSuccess(res.data.booking);
-      alert(`ຕໍ່ເວລາສຳເລັດ! ຄ່າໃຊ້ຈ່າຍເພີ່ມ ฿${Number(res.data.extra_price).toLocaleString()}`);
+      alert(`ຕໍ່ເວລາສຳເລັດ! ຄ່າໃຊ້ຈ່າຍເພີ່ມ ${formatUSD(res.data.extra_price)}`);
     } catch (err) {
       setError(err.response?.data?.message || 'ເກີດຂໍ້ຜິດພາດ');
     } finally {
@@ -239,9 +237,14 @@ function ExtendForm({ booking, onSuccess }) {
       <p className="text-sm font-semibold text-blue-800">ຕໍ່ເວລາ</p>
       <div className="flex gap-2 items-center">
         <label className="text-sm text-gray-600">ຈຳນວນຊົ່ວໂມງ</label>
-        <input type="number" min="1" max="12" value={hours} onChange={(e) => setHours(Number(e.target.value))}
-          className="border rounded-lg px-3 py-1.5 text-sm w-20 text-center" />
-        <span className="text-sm text-gray-500">ຊມ.</span>
+        <select value={hours} onChange={(e) => setHours(Number(e.target.value))}
+          className="border rounded-lg px-3 py-1.5 text-sm flex-1">
+          {Array.from({ length: 12 }, (_, i) => i + 1).map((h) => (
+            <option key={h} value={h}>
+              {h} ຊມ. — {formatUSD(h * overtimeRate)}
+            </option>
+          ))}
+        </select>
       </div>
       {error && <p className="text-red-500 text-xs">{error}</p>}
       <button type="submit" disabled={loading}
@@ -284,19 +287,6 @@ function BookingCard({ booking, isNew, onUpdate }) {
     }
   };
 
-  const doCheckout = async () => {
-    if (!window.confirm('ຢືນຢັນວ່າທ່ານອອກຈາກຫ້ອງແລ້ວ?')) return;
-    setActionLoading(true);
-    try {
-      const res = await api.patch(`/bookings/${booking.b_id}/checkout`);
-      onUpdate(res.data);
-    } catch (err) {
-      alert(err.response?.data?.message || 'ເກີດຂໍ້ຜິດພາດ');
-    } finally {
-      setActionLoading(false);
-    }
-  };
-
   return (
     <div className={`bg-white rounded-2xl shadow p-5 flex flex-col gap-3 ${isNew ? 'ring-2 ring-rose-400' : ''}`}>
       {isNew && (
@@ -323,7 +313,7 @@ function BookingCard({ booking, isNew, onUpdate }) {
 
       <div className="border-t pt-3 flex justify-between items-center">
         <span className="text-sm text-gray-500">ຍອດລວມ</span>
-        <span className="font-bold text-[#7B2438] text-base">฿{Number(booking.total_price).toLocaleString()}</span>
+        <span className="font-bold text-[#7B2438] text-base">{formatUSD(booking.total_price)}</span>
       </div>
 
       {/* pending — ຈ່າຍມັດຈຳ */}
@@ -360,7 +350,7 @@ function BookingCard({ booking, isNew, onUpdate }) {
         </div>
       )}
 
-      {/* checked_in — ຊຳລະສ່ວນທີ່ເຫຼືອ + ຕໍ່ເວລາ + check-out */}
+      {/* checked_in — ຊຳລະສ່ວນທີ່ເຫຼືອ + ຕໍ່ເວລາ */}
       {booking.status === 'checked_in' && (
         <>
           {!hasPendingCashFinal && !hasConfirmedFinalPayment && (
@@ -385,10 +375,6 @@ function BookingCard({ booking, isNew, onUpdate }) {
             {showExtend ? 'ເກັບແທັບ' : 'ຕໍ່ເວລາການໃຊ້ຫ້ອງ'}
           </button>
           {showExtend && <ExtendForm booking={booking} onSuccess={(updated) => { onUpdate(updated); setShowExtend(false); }} />}
-          <button onClick={doCheckout} disabled={actionLoading}
-            className="text-sm py-2 bg-orange-500 text-white rounded-xl font-semibold hover:bg-orange-600 disabled:opacity-50">
-            {actionLoading ? 'ກຳລັງດຳເນີນການ...' : 'ອອກຈາກຫ້ອງ (Check-out)'}
-          </button>
         </>
       )}
 
@@ -466,7 +452,7 @@ export default function MyBookingsPage() {
             )}
             {monthSummary && (
               <span className="ml-auto text-xs text-gray-500 text-right">
-                {monthSummary.count} ລາຍການ · ຍອດລວມ ฿{monthSummary.total.toLocaleString()}
+                {monthSummary.count} ລາຍການ · ຍອດລວມ {formatUSD(monthSummary.total)}
               </span>
             )}
           </div>

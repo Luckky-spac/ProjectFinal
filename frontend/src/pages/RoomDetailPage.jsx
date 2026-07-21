@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { FaArrowLeft, FaMicrophone, FaUser, FaCoins, FaBuilding, FaStar, FaClipboardList } from 'react-icons/fa';
 import api from '../api/axios';
+import { formatUSD } from '../utils/currency';
 
 function StarRow({ rating }) {
   return (
@@ -108,7 +109,7 @@ export default function RoomDetailPage() {
               <FaCoins className="text-lg" />
               <div>
                 <p className="text-xs text-gray-400">ລາຄາ</p>
-                <p className="font-semibold text-[#7B2438]">฿{Number(room.roomType?.price_per_hour).toLocaleString()}/ຊົ່ວໂມງ</p>
+                <p className="font-semibold text-[#7B2438]">{formatUSD(room.roomType?.price_per_hour)}/ຊົ່ວໂມງ</p>
               </div>
             </div>
             <div className="flex items-center gap-2 text-gray-600">
@@ -180,7 +181,7 @@ export default function RoomDetailPage() {
         <div className="max-w-2xl mx-auto flex items-center justify-between gap-4">
           <div>
             <p className="text-xs text-gray-400">ລາຄາເລີ່ມຕົ້ນ</p>
-            <p className="font-bold text-[#7B2438] text-lg">฿{Number(room.roomType?.price_per_hour).toLocaleString()}<span className="text-sm font-normal text-gray-400">/ຊົ່ວໂມງ</span></p>
+            <p className="font-bold text-[#7B2438] text-lg">{formatUSD(room.roomType?.price_per_hour)}<span className="text-sm font-normal text-gray-400">/ຊົ່ວໂມງ</span></p>
           </div>
           <button
             onClick={handleBook}
