@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { FaClipboardList, FaChartBar, FaHome } from 'react-icons/fa';
+import { FaClipboardList, FaChartBar, FaHome, FaPrint } from 'react-icons/fa';
 import api from '../api/axios';
 import { useAuth } from '../context/AuthContext';
 import { formatUSD } from '../utils/currency';
@@ -213,6 +213,12 @@ const TABS = [
   { key: 'rooms', label: 'ສະຖິຕິຫ້ອງ (6.3)' },
 ];
 
+const TAB_TITLE = {
+  bookings: 'ລາຍງານການຈອງປະຈຳວັນ',
+  revenue: 'ລາຍງານລາຍຮັບ',
+  rooms: 'ລາຍງານສະຖິຕິຫ້ອງ',
+};
+
 const SIDEBAR_NAV = [
   { icon: FaClipboardList, label: 'ການຈອງ', path: '/staff' },
   { icon: FaChartBar, label: 'ລາຍງານ', path: '/reports' },
@@ -231,7 +237,7 @@ export default function ReportsPage() {
     <div className="min-h-screen bg-green-50 flex">
 
       {/* ─── Sidebar ─── */}
-      <aside className="w-52 bg-[#7B2438] min-h-screen shrink-0 flex flex-col">
+      <aside className="w-52 bg-[#7B2438] min-h-screen shrink-0 flex flex-col no-print">
         <div className="px-5 py-5 border-b border-rose-700">
           <p className="text-white font-bold text-sm tracking-wide">DASHBOARD</p>
           <p className="text-rose-300 text-xs mt-0.5">ລະບົບຈັດການ</p>
@@ -270,9 +276,15 @@ export default function ReportsPage() {
       {/* ─── Main Content ─── */}
       <div className="flex-1 py-8 px-6">
         <div className="max-w-5xl">
-          <h1 className="text-2xl font-bold text-[#7B2438] mb-6">ລາຍງານ</h1>
+          <div className="flex items-center justify-between mb-6 no-print">
+            <h1 className="text-2xl font-bold text-[#7B2438]">ລາຍງານ</h1>
+            <button onClick={() => window.print()}
+              className="flex items-center gap-2 text-sm px-4 py-2 bg-[#7B2438] text-white rounded-lg font-semibold hover:bg-rose-900 transition">
+              <FaPrint /> ປິ້ນລາຍງານ
+            </button>
+          </div>
 
-          <div className="flex gap-2 mb-6 flex-wrap">
+          <div className="flex gap-2 mb-6 flex-wrap no-print">
             {TABS.map((t) => (
               <button key={t.key} onClick={() => setTab(t.key)}
                 className={`px-4 py-2 rounded-lg text-sm font-semibold transition ${tab === t.key ? 'bg-[#7B2438] text-white' : 'bg-white text-gray-600 border hover:bg-rose-50'}`}>
@@ -281,7 +293,11 @@ export default function ReportsPage() {
             ))}
           </div>
 
-          <div className="bg-white rounded-2xl shadow-sm p-6">
+          <div className="bg-white rounded-2xl shadow-sm p-6 print-area">
+            <div className="hidden print:block mb-4">
+              <p className="text-lg font-bold text-[#7B2438]">{TAB_TITLE[tab]}</p>
+              <p className="text-xs text-gray-500">ພິມເມື່ອ: {new Date().toLocaleString('lo-LA')}</p>
+            </div>
             {tab === 'bookings' && <BookingsReport />}
             {tab === 'revenue' && <RevenueReport />}
             {tab === 'rooms' && <RoomsReport />}

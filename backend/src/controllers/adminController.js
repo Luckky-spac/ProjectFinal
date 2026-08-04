@@ -16,9 +16,10 @@ const userWithCustomer = {
   include: [{ model: Customer, as: 'customer', attributes: ['fname', 'lname', 'phone', 'gender', 'birthday'] }],
 };
 
+// ສະແດງສະເພາະ role 'member' — ພະນັກງານ/admin ມີໜ້າຈັດການແຍກຕ່າງຫາກ (getEmployees) ທີ່ join ຊື່/ເບີໂທຈາກ Employee ບໍ່ແມ່ນ Customer
 const getUsers = async (req, res) => {
   try {
-    const users = await User.findAll({ ...userWithCustomer, order: [['createdAt', 'DESC']] });
+    const users = await User.findAll({ ...userWithCustomer, where: { role: 'member' }, order: [['createdAt', 'DESC']] });
     res.json(users);
   } catch (err) {
     res.status(500).json({ message: err.message });

@@ -1,8 +1,9 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { FaClipboardList, FaCalendarAlt } from 'react-icons/fa';
+import { FaClipboardList, FaCalendarAlt, FaPrint } from 'react-icons/fa';
 import api from '../api/axios';
 import { formatUSD } from '../utils/currency';
+import { printBookingReceipt } from '../utils/printReceipt';
 
 const STATUS_CONFIG = {
   pending: { text: 'ລໍການຢືນຢັນ', cls: 'bg-yellow-100 text-yellow-700' },
@@ -186,7 +187,13 @@ function Receipt({ booking }) {
   const finalPayment = booking.payments?.find((p) => p.type === 'final' && p.status === 'confirmed');
   return (
     <div className="mt-3 bg-gray-50 rounded-xl p-4 flex flex-col gap-2 text-sm">
-      <p className="font-semibold text-gray-700">ໃບບິນ</p>
+      <div className="flex items-center justify-between">
+        <p className="font-semibold text-gray-700">ໃບບິນ</p>
+        <button type="button" onClick={() => printBookingReceipt(booking)}
+          className="flex items-center gap-1.5 text-xs px-3 py-1.5 bg-[#7B2438] text-white rounded-lg font-semibold hover:bg-rose-900 transition">
+          <FaPrint /> ປິ້ນໃບບິນ
+        </button>
+      </div>
       <div className="flex justify-between text-gray-600">
         <span>ລາຄາລວມ</span><span>{formatUSD(booking.total_price)}</span>
       </div>

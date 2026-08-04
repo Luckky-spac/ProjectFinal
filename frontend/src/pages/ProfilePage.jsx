@@ -7,7 +7,7 @@ import { useAuth } from '../context/AuthContext';
 export default function ProfilePage() {
   const { user, refreshUser, isEmployee } = useAuth();
   const [form, setForm] = useState({
-    fname: '', lname: '', name: '',
+    fname: '', lname: '',
     phone: '', gender: '', birthday: '', address: '',
     password: '', new_password: '', confirm_password: '',
   });
@@ -22,7 +22,6 @@ export default function ProfilePage() {
         ...f,
         fname: data.fname || '',
         lname: data.lname || '',
-        name: data.name || '',
         phone: data.phone || '',
         gender: data.gender || '',
         birthday: data.birthday || '',
@@ -47,7 +46,8 @@ export default function ProfilePage() {
     try {
       const payload = isEmployee
         ? {
-            name: form.name,
+            fname: form.fname,
+            lname: form.lname || undefined,
             phone: form.phone,
             gender: form.gender || undefined,
             birthday: form.birthday || undefined,
@@ -105,23 +105,16 @@ export default function ProfilePage() {
               className="w-full border rounded-xl px-4 py-2.5 text-sm bg-gray-50 text-gray-400 cursor-not-allowed" />
           </div>
 
-          {isEmployee ? (
+          <div className="grid grid-cols-2 gap-3">
             <div>
               <label className="text-sm text-gray-600 mb-1 block">ຊື່</label>
-              <input name="name" value={form.name} onChange={handleChange} required className={inputCls} />
+              <input name="fname" value={form.fname} onChange={handleChange} required className={inputCls} placeholder="ຊື່" />
             </div>
-          ) : (
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className="text-sm text-gray-600 mb-1 block">ຊື່</label>
-                <input name="fname" value={form.fname} onChange={handleChange} required className={inputCls} placeholder="ຊື່" />
-              </div>
-              <div>
-                <label className="text-sm text-gray-600 mb-1 block">ນາມສະກຸນ</label>
-                <input name="lname" value={form.lname} onChange={handleChange} className={inputCls} placeholder="ນາມສະກຸນ" />
-              </div>
+            <div>
+              <label className="text-sm text-gray-600 mb-1 block">ນາມສະກຸນ</label>
+              <input name="lname" value={form.lname} onChange={handleChange} className={inputCls} placeholder="ນາມສະກຸນ" />
             </div>
-          )}
+          </div>
 
           <div>
             <label className="text-sm text-gray-600 mb-1 block">ເບີໂທ</label>

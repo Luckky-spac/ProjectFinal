@@ -1,10 +1,11 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { FaTools, FaChartBar, FaClipboardList, FaUser } from 'react-icons/fa';
+import { FaTools, FaChartBar, FaClipboardList, FaUser, FaPrint } from 'react-icons/fa';
 import PasswordInput from '../components/PasswordInput';
 import api from '../api/axios';
 import { useAuth } from '../context/AuthContext';
 import { formatUSD } from '../utils/currency';
+import { printBookingReceipt } from '../utils/printReceipt';
 
 const STATUS_CONFIG = {
   pending: { text: 'ລໍການຢືນຢັນ', cls: 'bg-yellow-100 text-yellow-700' },
@@ -298,6 +299,12 @@ function BookingRow({ booking, onUpdate }) {
               <ActionButton label="ຍົກເລີກການຈອງ" color="red" disabled={loading} onClick={() => {
                 if (window.confirm('ຢືນຢັນຍົກເລີກການຈອງນີ້?')) changeStatus('cancelled');
               }} />
+            )}
+
+            {/* ພິມໃບບິນໃຫ້ລູກຄ້າ (ຫຼັງຈ່າຍ+ແຈ້ງອອກຄົບແລ້ວ) */}
+            {booking.status === 'completed' && (
+              <ActionButton label={<><FaPrint className="inline mr-1" /> ປິ້ນໃບບິນ</>} color="purple"
+                onClick={() => printBookingReceipt(booking)} />
             )}
           </div>
 
